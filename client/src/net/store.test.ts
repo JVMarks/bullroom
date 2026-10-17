@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OfficeSnapshot } from '../../../shared/types';
-import { mockOptionsFrom, OfficeStore, pageBuild, reconnectDelay, type EventSourceLike } from './store';
+import { mockOptionsFrom, OfficeStore, pageBuild, reconnectDelay, tradingOptionsFrom, type EventSourceLike } from './store';
 
 /** EventSource falso: o teste dispara open/error e muda o readyState. */
 class FakeSource implements EventSourceLike {
@@ -33,6 +33,21 @@ class FakeSource implements EventSourceLike {
     this.fire('error');
   }
 }
+
+describe('tradingOptionsFrom (Bullroom)', () => {
+  it('só no ?mock=trading; padrão 18 robôs, no máximo 54', () => {
+    expect(tradingOptionsFrom('?mock=trading')).toEqual({ speed: 1, bots: 18 });
+    expect(tradingOptionsFrom('?mock=trading&bots=54')).toEqual({ speed: 1, bots: 54 });
+    expect(tradingOptionsFrom('?mock=trading&bots=99')).toEqual({ speed: 1, bots: 54 });
+    expect(tradingOptionsFrom('?mock=trading&bots=0')).toEqual({ speed: 1, bots: 0 });
+    expect(tradingOptionsFrom('?mock=trading&bots=abc&speed=10&seed=7')).toEqual({ speed: 10, bots: 18, seed: 7 });
+  });
+
+  it('o demo antigo continua igual', () => {
+    expect(tradingOptionsFrom('?mock=1')).toBeNull();
+    expect(tradingOptionsFrom('')).toBeNull();
+  });
+});
 
 describe('mockOptionsFrom', () => {
   it('usa os padrões sem parâmetros', () => {

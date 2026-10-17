@@ -7,6 +7,7 @@
 import type { AppearanceParts } from '../../../shared/appearance';
 import type { Activity, AgentDetail, AgentInfo, FeedItem, Notice, OfficeSnapshot, OutboxMessage, PermissionDecision, PermissionRequestInfo, RoomInfo } from '../../../shared/types';
 import { DemoSimulator } from '../../../shared/demo/simulator';
+import { TradingSimulator, type TradingSimOptions } from '../../../shared/trading/simulator';
 import { tr } from '../../../shared/i18n';
 
 export type ConnectionState = 'connecting' | 'open' | 'closed' | 'mock';
@@ -81,6 +82,20 @@ export function mockOptionsFrom(search: string): { speed: number; sessions: numb
     ...(seed !== null && seed >= 0 ? { seed: Math.floor(seed) } : {}),
     ...(params.get('noquota') === '1' ? { codexNoQuota: true } : {}),
   };
+}
+
+/**
+ * Opções do simulador de trading (Bullroom) a partir da query string: só com `?mock=trading` (senão null).
+ * `bots=N` (padrão 18, até 54), `speed=N` (até 50) e `seed=N`, como no demo.
+ */
+export function tradingOptionsFrom(search: string): (TradingSimOptions & { speed: number; bots: number }) | null {
+  const params = new URLSearchParams(search);
+  if (params.get('mock') !== 'trading') return null;
+  const { speed, seed } = mockOptionsFrom(search);
+  const raw = params.get('bots');
+  const n = raw === null || raw.trim() === '' ? NaN : Number(raw);
+  const bots = Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), 54) : 18;
+  return { speed, bots, ...(seed !== undefined ? { seed } : {}) };
 }
 
 export class OfficeStore {
@@ -503,8 +518,10 @@ export class OfficeStore {
   private startMock(): void {
     if (this.mockTimer) return;
     this.setConnection('mock');
-    const sim = new DemoSimulator(mockOptionsFrom(this.search));
-    this.mockSim = sim;
+    // ?mock=trading: robôs de trading simulados (Bullroom); sem pedidos de permissão nem mensagens.
+    const trading = tradingOptionsFrom(this.search);
+    const sim = trading ? new TradingSimulator(trading) : new DemoSimulator(mockOptionsFrom(this.search));
+    this.mockSim = sim instanceof DemoSimulator ? sim : null;
     this.applySnapshot(sim.snapshot());
     this.mockTimer = setInterval(() => {
       const now = Date.now();
