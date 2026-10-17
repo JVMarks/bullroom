@@ -3295,4 +3295,11 @@ export const FR: Readonly<Record<string, string>> = {
   "COMPRA {0} · {1} · ${2}": "ACHAT {0} · {1} · ${2}",
   "VENDA {0} · {1} · ${2}": "VENTE {0} · {1} · ${2}",
   "EJETADO · {0}": "ÉJECTÉ · {0}",
+
+  // client/src/ui/portfolio.ts (Bullroom)
+  "1 robô": "1 robot",
+  "{0} robôs": "{0} robots",
+  "{0} · {1} · {2} em operação": "{0} · {1} · {2} en position",
+  "Dados simulados: nenhuma corretora, chave ou dinheiro real": "Données simulées : aucune plateforme, clé ni argent réel",
+  "Carteira: {0}. Ejetados hoje: {1}.": "Portefeuille : {0}. Éjectés aujourd'hui : {1}.",
 };

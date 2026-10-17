@@ -11,6 +11,7 @@ import { focusPermission, nextPermissionAgent, permissionAgents } from './permis
 import { UsageCards } from './usage';
 import { VersionChip } from './version';
 import { wordmark } from './widgets';
+import { PortfolioBar } from './portfolio';
 import { tr } from '../../../shared/i18n';
 
 interface CounterRefs {
@@ -36,6 +37,9 @@ export class TopBar implements UiComponent {
   private demoBadge: HTMLElement;
   /** Linha de baixo da marca (conexão, versão, selos): o chip do Habblaud World entra aqui (ui/index.ts). */
   private status: HTMLElement;
+  /** Contadores de agentes (escondidos quando a carteira do Bullroom está na barra). */
+  private counterWrap: HTMLElement;
+  private portfolio: PortfolioBar;
   private counters = new Map<keyof Counters, CounterRefs>();
   private shellsBtn: HTMLButtonElement;
   /** Próximo agente do botão de shells (cliques seguidos passam por todos, do que espera há mais tempo). */
@@ -68,6 +72,8 @@ export class TopBar implements UiComponent {
     this.demoBadge = h('span', { class: 'ui-demo-badge', text: tr('Demonstração'), title: tr('Agentes de demonstração ligados (desligue em Configurações)'), hidden: true });
 
     const counterWrap = h('div', { class: 'ui-counters', role: 'group', attrs: { 'aria-label': tr('Resumo do escritório') } });
+    this.counterWrap = counterWrap;
+    this.portfolio = new PortfolioBar();
     for (const c of COUNTERS) {
       const value = h('span', { class: 'ui-counter__value', text: '0' });
       const label = h('span', { class: 'ui-counter__label', text: c.plural });
@@ -152,6 +158,7 @@ export class TopBar implements UiComponent {
         ),
       ),
       counterWrap,
+      this.portfolio.el,
       this.usage.el,
       h('div', { class: 'ui-topbar__right' }, viewGroup, panelGroup),
     );
@@ -218,6 +225,10 @@ export class TopBar implements UiComponent {
     this.renderShells(c.shells, now);
 
     this.usage.render();
+    // Bullroom: com carteira no snapshot, ela toma o lugar dos contadores de agentes e do uso das contas.
+    this.portfolio.render(snap?.portfolio);
+    setHidden(this.counterWrap, !!snap?.portfolio);
+    if (snap?.portfolio) setHidden(this.usage.el, true);
     this.version.render();
     setHidden(this.spawnBtn, !access().spawn || store.mock || store.replaying);
 

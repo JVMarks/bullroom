@@ -10,6 +10,14 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Novo
+
+- **Robôs de trading simulados (`?mock=trading`).** Uma sala por par de moedas, até 6 robôs por sala (`&bots=54`,
+  `&speed=10`, `&seed=7`). Posicionado opera na mesa, zerado circula, quem bate o limite de perda diária é ejetado.
+- **PL sobre a cabeça** de cada robô (verde, vermelho ou cinza), que só pisca quando o valor muda.
+- **Carteira na barra do topo:** PL total, robôs, em operação, mini-gráfico e o selo SIMULATED.
+- **Feed de operações:** COMPRA/VENDA, par, corretora e valor; EJETADO com o PL final.
+
 ### Mudado
 
 - **Bullroom: fork do Habblaud.** Nome, título da página e README novos, com crédito ao Habblaud (MIT); o README

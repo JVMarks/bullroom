@@ -11147,3 +11147,47 @@ html.is-replay #world {
 .ui-world-chip__visitors[hidden] {
   display: none;
 }
+
+/* Bullroom: carteira na barra do topo (toma o lugar dos contadores de agentes). */
+.ui-portfolio {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ui-portfolio[hidden] {
+  display: none;
+}
+.ui-portfolio__total {
+  font-size: 17px;
+  font-weight: 800;
+}
+.ui-portfolio__rest {
+  font-size: 12px;
+  color: #b9c0cc;
+}
+.ui-portfolio__spark {
+  width: 84px;
+  height: 22px;
+}
+.ui-portfolio__sim {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fac665;
+  border: 1px solid rgba(250, 198, 101, 0.5);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+@media (max-width: 760px) {
+  .ui-portfolio__rest,
+  .ui-portfolio__spark {
+    display: none;
+  }
+}
