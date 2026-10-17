@@ -3274,4 +3274,9 @@ export const ES: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Sello dejado en la recepción: {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Entra al edificio o acércate más a la puerta para sellar.",
   "O carimbo não foi deixado. Tente de novo.": "El sello no se dejó. Inténtalo de nuevo.",
+
+  // shared/trading/simulator.ts (Bullroom)
+  "COMPRA {0} · {1} · ${2}": "COMPRA {0} · {1} · ${2}",
+  "VENDA {0} · {1} · ${2}": "VENTA {0} · {1} · ${2}",
+  "EJETADO · {0}": "EXPULSADO · {0}",
 };

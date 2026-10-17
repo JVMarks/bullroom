@@ -3290,4 +3290,9 @@ export const FR: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Tampon laissé à l'accueil : {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Entrez dans l'immeuble ou approchez-vous de la porte pour tamponner.",
   "O carimbo não foi deixado. Tente de novo.": "Le tampon n'a pas été laissé. Réessayez.",
+
+  // shared/trading/simulator.ts (Bullroom)
+  "COMPRA {0} · {1} · ${2}": "ACHAT {0} · {1} · ${2}",
+  "VENDA {0} · {1} · ${2}": "VENTE {0} · {1} · ${2}",
+  "EJETADO · {0}": "ÉJECTÉ · {0}",
 };
