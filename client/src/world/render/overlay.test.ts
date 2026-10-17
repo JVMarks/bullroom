@@ -1,7 +1,8 @@
 // Regras puras da camada de texto do mundo (balões e enquadramento).
 import { describe, expect, it } from 'vitest';
 import { overviewFrame } from '../camera';
-import { rationBubbles, waitBubbleText } from './overlay';
+import { pnlBadge, rationBubbles, waitBubbleText } from './overlay';
+import type { AgentInfo } from '../../../../shared/types';
 
 describe('balões', () => {
   it('espera: só o motivo, sem o prefixo redundante', () => {
@@ -42,5 +43,20 @@ describe('visão geral', () => {
     // começa acima da parede norte (placas) e termina abaixo da fachada sul
     expect(ui.cy).toBeGreaterThan(building.h / 2);
     expect(ui.dy).toBeGreaterThan(0);
+  });
+});
+
+describe('balão de PL (Bullroom)', () => {
+  const agent = (trading?: AgentInfo['trading']) => ({ trading }) as AgentInfo;
+
+  it('só para robôs de trading', () => {
+    expect(pnlBadge(agent(undefined), 'pt-BR')).toBeNull();
+  });
+
+  it('texto e cor do PL', () => {
+    const t = { exchange: 'Binance', pair: 'BTC/USDT', strategy: 'Grid', position: 'long' as const, pnlUsd: 2.58, dailyLossLimitUsd: 5 };
+    expect(pnlBadge(agent(t), 'pt-BR')).toEqual({ text: '+$2,58', tone: 'gain' });
+    expect(pnlBadge(agent({ ...t, pnlUsd: -1.31 }), 'en')).toEqual({ text: '-$1.31', tone: 'loss' });
+    expect(pnlBadge(agent({ ...t, pnlUsd: 0 }), 'pt-BR')).toEqual({ text: '+$0,00', tone: 'zero' });
   });
 });

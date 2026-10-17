@@ -14,7 +14,10 @@ import type { Sim } from '../sim/sim';
 import { buildAnim } from './anim';
 import { drawFxBanner } from './github-fx';
 import type { HeadInfo, Renderer } from './renderer';
-import { tr } from '../../../../shared/i18n';
+import { intlLocale, tr } from '../../../../shared/i18n';
+import { formatPnl, pnlTone } from '../../../../shared/trading/rules';
+import type { PnlTone } from '../../../../shared/trading/types';
+import type { AgentInfo } from '../../../../shared/types';
 
 // A Pixelify Sans tem o "C" maiúsculo quase fechado (lê-se "Oopa" em vez de "Copa") em qualquer
 // peso/tamanho usado no canvas; os textos do mundo usam a fonte do sistema, sempre legível.
@@ -38,6 +41,24 @@ const LABEL_H = 15;
 const RECENT_MS = 4000;
 /** Altura mínima (px CSS) da placa na tela para escrever o nome nela. */
 const SIGN_MIN_PX = 14;
+
+// ---- Bullroom: balão de PL sobre a cabeça de cada robô
+const PNL_FONT = `800 11px ${UI_FONT}`;
+const PNL_FONT_SMALL = `800 9px ${UI_FONT}`;
+const PNL_H = 16;
+const PNL_H_SMALL = 13;
+/** Abaixo deste zoom, o balão de PL usa a fonte menor. */
+const PNL_SMALL_ZOOM = 1.5;
+/** Destaque curto quando o valor muda (princípio da calma: parado no resto do tempo). */
+const PNL_FLASH_MS = 700;
+const PNL_COLORS: Record<PnlTone, string> = { gain: '#4ade80', loss: '#f87171', zero: '#a1a9b8' };
+
+/** Texto e tom do balão de PL de um robô; null para agentes que não são de trading. Puro (testável). */
+export function pnlBadge(agent: Pick<AgentInfo, 'trading'>, locale: string): { text: string; tone: PnlTone } | null {
+  const t = agent.trading;
+  if (!t) return null;
+  return { text: formatPnl(t.pnlUsd, locale), tone: pnlTone(t.pnlUsd) };
+}
 /** Abaixo deste zoom (visão geral), os balões de atividade são racionados. */
 export const OVERVIEW_ZOOM = 1.8;
 /** Abaixo deste zoom (prédio inteiro numa tela pequena), só alertas/entregas, como ícone. */
@@ -190,6 +211,8 @@ export class Overlay {
   /** Objetos reaproveitados entre frames (sem alocação no caminho quente). */
   private bubblePool: Bubble[] = [];
   private labelPool: Label[] = [];
+  /** Último texto de PL de cada robô e quando mudou (para o destaque curto). */
+  private pnlSeen = new Map<string, { text: string; at: number }>();
   private nb = 0;
   private nl = 0;
   private rationIn: { room: string; prio: number; changedAt: number }[] = [];
@@ -324,9 +347,11 @@ export class Overlay {
       const visitor = ch === this.sim.visitor;
       const labeled = selected || hovered || ch.mode === 'wait' || showAll || visitor;
       const above = labeled && this.labelAbove(ch);
+      // Bullroom: o balão de PL fica logo acima da cabeça (ou da etiqueta); o de atividade sobe por cima dele
+      const pnlLift = ch.info.trading && zoom >= TINY_ZOOM ? this.drawPnl(ch, head, above, now) : 0;
       const b = this.bubbleFor(ch, head, now, opts, selected, hovered);
       if (b) {
-        b.extraLift = above ? LABEL_H + 3 : 0;
+        b.extraLift = (above ? LABEL_H + 3 : 0) + pnlLift;
         items.push(b);
       }
       if (labeled) {
@@ -363,6 +388,57 @@ export class Overlay {
     this.drawChats(now);
     this.drawFloaters(now);
     ctx.textBaseline = 'alphabetic';
+  }
+
+  /**
+   * Bullroom: desenha o balão de PL acima da cabeça (acima da etiqueta, quando ela vai em cima) e o registra para
+   * balões e etiquetas desviarem. Retorna quanto o balão de atividade precisa subir (px de tela).
+   */
+  private drawPnl(ch: Character, head: HeadInfo, labelAbove: boolean, now: number): number {
+    const badge = pnlBadge(ch.info, intlLocale());
+    if (!badge) return 0;
+    const { ctx } = this;
+    const small = this.zoom < PNL_SMALL_ZOOM;
+    const font = small ? PNL_FONT_SMALL : PNL_FONT;
+    const h = small ? PNL_H_SMALL : PNL_H;
+    // visão geral: sem o "$" (cabe entre as cadeiras vizinhas); de perto, o valor completo
+    const text = small ? badge.text.replace('$', '') : badge.text;
+    const w = Math.round(this.measure(font, text) + (small ? 6 : 12));
+    const lift = Math.max(1, this.iconLift(ch)) * this.zoom + (labelAbove ? LABEL_H + 3 : 0);
+    const x = Math.round(this.sx(head.x) - w / 2);
+    let y = Math.round(this.sy(head.y) - lift - h - 4);
+    // vizinho já ocupa o lugar: sobe um degrau (escada), para nenhum valor ficar escondido
+    let extra = 0;
+    if (this.overlaps(x, y, w, h)) {
+      extra = h + 2;
+      y -= extra;
+    }
+    const seen = this.pnlSeen.get(ch.id);
+    if (!seen) this.pnlSeen.set(ch.id, { text: badge.text, at: -Infinity });
+    else if (seen.text !== badge.text) this.pnlSeen.set(ch.id, { text: badge.text, at: now });
+    const flash = Math.max(0, 1 - (now - (this.pnlSeen.get(ch.id)!.at)) / PNL_FLASH_MS);
+    const color = PNL_COLORS[badge.tone];
+    ctx.save();
+    ctx.globalAlpha = ch.info.status === 'offline' ? 0.75 : 1;
+    ctx.fillStyle = 'rgba(12, 16, 22, 0.9)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1 + flash * 1.5;
+    if (flash > 0) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8 * flash;
+    }
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = color;
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
+    ctx.restore();
+    this.place(x, y, w, h);
+    return h + 3 + extra;
   }
 
   /** Quem senta virado para a câmera atrás de uma mesa: a etiqueta nos pés cobriria a tela do colega. */
