@@ -189,7 +189,8 @@ const LOCAL_WORLD_HOSTS: readonly string[] = ['127.0.0.1', 'host.docker.internal
  */
 export function parseWorldConfig(env: NodeJS.ProcessEnv, argv: string[]): WorldConfig {
   const flag = env.HABBLAUD_WORLD?.trim();
-  const enabled = !flag || isTruthy(flag);
+  // Bullroom: desligado por padrão (o upstream liga). Só HABBLAUD_WORLD=1 liga o World.
+  const enabled = !!flag && isTruthy(flag);
   const dev = argv.includes('--dev') || isTruthy(env.HABBLAUD_WORLD_DEV);
   if (!enabled) return { enabled, dev };
   const raw = env.HABBLAUD_WORLD_URL?.trim();

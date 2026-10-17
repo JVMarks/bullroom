@@ -10,6 +10,13 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Mudado
+
+- **Bullroom: fork do Habblaud.** Nome, título da página e README novos, com crédito ao Habblaud (MIT); o README
+  original está em `docs/upstream-README.md`. Sem verificação de versão nova no GitHub do Habblaud.
+- **Habblaud World desligado por padrão.** Só liga com `HABBLAUD_WORLD=1`: nada de servidor de terceiros sem a pessoa
+  pedir.
+
 ## [1.0.3] - 2026-10-16
 
 ### Corrigido

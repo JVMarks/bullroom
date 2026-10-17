@@ -1,14 +1,9 @@
 {
-  "name": "habblaud",
+  "name": "bullroom",
   "version": "1.0.3",
   "private": true,
-  "description": "Escritório virtual animado que mostra, em tempo real, o que seus agentes do Claude Code estão fazendo.",
+  "description": "Bullroom: your trading bots as an animated pixel-art office. A bitcoin100treta project, part of OpenSpread.",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/marmottajr/habblaud.git"
-  },
-  "homepage": "https://github.com/marmottajr/habblaud#readme",
   "type": "module",
   "engines": {
     "node": ">=22.12"
