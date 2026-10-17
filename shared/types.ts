@@ -6,6 +6,7 @@
 
 import type { AppearanceParts } from './appearance';
 import type { WorldMeta } from './world/api';
+import type { BotTrading, PortfolioInfo } from './trading/types';
 
 export type AgentKind = 'main' | 'sub';
 
@@ -186,6 +187,8 @@ export interface AgentInfo {
    * e perguntou pela caixa de entrada há pouco. Ver POST /api/messages.
    */
   canMessage?: boolean;
+  /** Bullroom: o agente é um robô de trading (estado, PL e limite). Ausente = agente comum. */
+  trading?: BotTrading;
 }
 
 export interface RoomInfo {
@@ -338,6 +341,8 @@ export interface OfficeSnapshot {
   ptys?: PtyInfo[];
   /** Contas do Claude detectadas (com uso de 5h/semanal quando disponível). */
   accounts: AccountInfo[];
+  /** Bullroom: resumo da carteira dos robôs. Ausente = não é um escritório de trading. */
+  portfolio?: PortfolioInfo;
   meta: {
     demo: boolean;
     sources: SourceInfo[];
