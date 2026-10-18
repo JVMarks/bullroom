@@ -28,6 +28,11 @@ do meio (0.**3**.0).
 
 ### Mudado
 
+- **Modos de trading sem restos do Claude Code.** Em `?mock=trading` e `?source=core`, a barra lateral mostra a
+  posição do robô (comprado, vendido, zerado, ejetado) ou "corretora"; o painel diz Robô/Corretora, com status
+  Operando/Zerado/Ejetado/Ao vivo; somem a pasta e as contas da sala e os botões Entregas, Meu dia e Mundo.
+  `?mock=1` e o servidor continuam iguais ao Habblaud.
+- **Placa da recepção "Bullroom"** em estilo placar (chapa preta, letras verdes), gerada pela fonte bitmap.
 - **Bullroom: fork do Habblaud.** Nome, título da página e README novos, com crédito ao Habblaud (MIT); o README
   original está em `docs/upstream-README.md`. Sem verificação de versão nova no GitHub do Habblaud.
 - **Habblaud World desligado por padrão.** Só liga com `HABBLAUD_WORLD=1`: nada de servidor de terceiros sem a pessoa
