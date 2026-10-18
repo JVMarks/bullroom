@@ -45,7 +45,7 @@ function loadImage(file: string): Promise<HTMLImageElement | null> {
     img.decoding = 'async';
     img.onload = () => resolve(img.naturalWidth > 0 ? img : null);
     img.onerror = () => resolve(null);
-    img.src = `/assets/${file.replace(/^\/+/, '')}`;
+    img.src = assetUrl(`assets/${file.replace(/^\/+/, '')}`);
   });
 }
 
@@ -57,7 +57,7 @@ function validFile(f: unknown): f is ManifestFile {
 
 export async function loadWorldAssets(signal?: AbortSignal): Promise<WorldAssets | null> {
   try {
-    const res = await fetch('/assets/manifest.json', { signal, cache: 'no-cache' });
+    const res = await fetch(assetUrl('/assets/manifest.json'), { signal, cache: 'no-cache' });
     if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) return null;
     const m = (await res.json()) as Manifest;
     const wallArt: WallArtAsset[] = [];
@@ -95,3 +95,4 @@ export async function loadWorldAssets(signal?: AbortSignal): Promise<WorldAssets
     return null;
   }
 }
+import { assetUrl } from '../paths';

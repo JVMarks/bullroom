@@ -1,4 +1,5 @@
 // Camadas de estado: splash de carregamento, escritório vazio e aviso de conexão perdida.
+import { assetUrl } from '../paths';
 import type { UiComponent, UiContext } from './context';
 import { h, prefersReducedMotion, setHidden, setText } from './dom';
 import { FALLBACK_MARK } from './icons';
@@ -19,7 +20,7 @@ export function splashText(connection: string, waitedMs: number, core: boolean):
 
 function brandMark(size: number): HTMLElement {
   const mark = h('span', { class: 'ui-brand__mark' });
-  const img = h('img', { attrs: { src: '/assets/brand/logo-mark@4x.png', alt: '', width: size, height: size, draggable: 'false' } });
+  const img = h('img', { attrs: { src: assetUrl('/assets/brand/logo-mark@4x.png'), alt: '', width: size, height: size, draggable: 'false' } });
   img.addEventListener('error', () => {
     mark.innerHTML = FALLBACK_MARK;
   });
@@ -81,7 +82,7 @@ export class EmptyState implements UiComponent {
 
   constructor(private ctx: UiContext) {
     const art = h('div', { class: 'ui-empty__art', attrs: { 'aria-hidden': 'true' } });
-    const img = h('img', { attrs: { src: '/assets/illustrations/empty-office.png', alt: '', draggable: 'false' } });
+    const img = h('img', { attrs: { src: assetUrl('/assets/illustrations/empty-office.png'), alt: '', draggable: 'false' } });
     img.addEventListener('error', () => {
       img.remove();
       art.classList.add('is-css');

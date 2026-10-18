@@ -1,6 +1,7 @@
 // Notificações (opt-in): Notification do navegador para alertas com a aba oculta, sons de aviso
 // (sino de "precisa de você", estalo de conclusão; pela mesa de som da UI) e o contador no título da
 // aba quando há agentes esperando você.
+import { assetUrl } from '../paths';
 import type { Notice } from '../../../shared/types';
 import type { SoundBoard } from '../audio/board';
 import type { UiComponent, UiContext } from './context';
@@ -57,7 +58,7 @@ export class Notifier implements UiComponent {
         const notification = new Notification(tr('Habblaud — precisa de você'), {
           body: n.text,
           tag: n.agentId ?? n.id,
-          icon: '/assets/brand/favicon-32.png',
+          icon: assetUrl('/assets/brand/favicon-32.png'),
         });
         notification.onclick = () => {
           window.focus();

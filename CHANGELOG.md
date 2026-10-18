@@ -28,6 +28,8 @@ do meio (0.**3**.0).
 
 ### Mudado
 
+- **Demo estática em subcaminho** (`npm run build:demo` → `dist/demo`, base `/OpenSpread/demo/`): os arquivos de
+  `client/public` passam por `assetUrl()`, e o manifesto usa caminhos relativos e o nome Bullroom.
 - **Modos de trading sem restos do Claude Code.** Em `?mock=trading` e `?source=core`, a barra lateral mostra a
   posição do robô (comprado, vendido, zerado, ejetado) ou "corretora"; o painel diz Robô/Corretora, com status
   Operando/Zerado/Ejetado/Ao vivo; somem a pasta e as contas da sala e os botões Entregas, Meu dia e Mundo.
