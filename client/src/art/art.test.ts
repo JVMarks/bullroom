@@ -8,7 +8,7 @@ import { HAIR, HEAD_BASE } from './character/hair';
 import { CHAR_AX, CHAR_AY, CHAR_H, CHAR_W, POSE_DURATION, POSE_FRAMES, isSeated, renderCharacter } from './character/render';
 import { PixelBuf } from './core/pixbuf';
 import type { BufSprite } from './core/sprite';
-import { drawBoard, drawClock, drawScreen, drawWindowView } from './dynamic';
+import { chartColumns, drawBoard, drawClock, drawRoomChart, drawScreen, drawWindowView } from './dynamic';
 import { normalizeFurniture, renderFurniture } from './furniture/index';
 import { ICON_NAMES, iconTemplates, renderIcon } from './icons';
 import { CHUNK_PX, floorChunk } from './surfaces/floor';
@@ -848,6 +848,12 @@ describe('desenhos por quadro', () => {
     const { ctx, rects } = fakeCtx();
     drawBoard(ctx, board, Array.from({ length: 30 }, (_, i) => ({ status: (['pending', 'in_progress', 'completed'] as const)[i % 3] })), 1000);
     expect(inside(rects, board)).toBe(true);
+    // Bullroom: telão da sala na lousa (texto do PL + gráfico), sempre dentro da lousa
+    for (const series of [[], [{ pnlUsd: 0 }], Array.from({ length: 360 }, (_, i) => ({ pnlUsd: Math.sin(i / 9) * 4 - i / 90 }))]) {
+      const tv = fakeCtx();
+      drawRoomChart(tv.ctx, board, series, '-123,45');
+      expect(inside(tv.rects, board), `série de ${series.length}`).toBe(true);
+    }
     const face = { x: 3, y: 3, w: 10, h: 10 };
     const c = fakeCtx();
     for (let h = 0; h < 24; h++) drawClock(c.ctx, face, new Date(2026, 0, 1, h, h * 2, h));
@@ -915,5 +921,17 @@ describe('editor do personagem (arte)', () => {
     const ok = { ...appearanceFromSeed(1), topStyle: 'tshirt' as const, top: '#e2604f' };
     expect(fitToOptions(ok).top).toBe('#e2604f');
     expect(fitToOptions({ ...ok, accessory: 'sunglasses', accessoryColor: '#e2604f' }).accessoryColor).toBe('#22232b');
+  });
+});
+
+describe('telão da sala (Bullroom)', () => {
+  it('chartColumns: uma altura por coluna; maior valor em cima, zero no meio quando simétrico', () => {
+    expect(chartColumns([], 10, 9)).toEqual([]);
+    expect(chartColumns([0, 2, -2], 3, 9)).toEqual([4, 0, 8]);
+    // mais pontos que colunas: amostra até caber, e a última coluna é o último ponto
+    const cols = chartColumns(Array.from({ length: 100 }, (_, i) => i), 10, 9);
+    expect(cols).toHaveLength(10);
+    expect(cols[9]).toBe(0);
+    for (const y of cols) expect(y >= 0 && y <= 8).toBe(true);
   });
 });

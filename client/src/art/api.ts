@@ -361,6 +361,8 @@ export interface ArtModule {
   drawScreen(ctx: CanvasRenderingContext2D, r: Rect, mode: ScreenMode, t: number, seed: number): void;
   /** Post-its do quadro kanban (colunas: a fazer / fazendo / feito). */
   drawBoard(ctx: CanvasRenderingContext2D, r: Rect, items: readonly { status: 'pending' | 'in_progress' | 'completed' }[], t: number): void;
+  /** Bullroom: telão da sala na lousa (PL da sala em pixels + linha da série). */
+  drawRoomChart(ctx: CanvasRenderingContext2D, r: Rect, series: readonly { pnlUsd: number }[], label: string): void;
   /** Céu + horizonte visto pela janela conforme a hora local (0–24, fracionária). */
   drawWindowView(ctx: CanvasRenderingContext2D, r: Rect, hour: number, t: number, seed: number): void;
   drawClock(ctx: CanvasRenderingContext2D, r: Rect, date: Date): void;

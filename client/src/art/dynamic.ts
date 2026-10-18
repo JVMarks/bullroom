@@ -2,6 +2,7 @@
 // Regras: só fillRect com coordenadas inteiras (barato), sem getImageData e sem criar canvases.
 import type { Rect, ScreenMode } from './api';
 import { mix } from './core/color';
+import { pixelText } from './pixelfont';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -644,6 +645,72 @@ export function drawBoard(ctx: Ctx, r: Rect, items: readonly { status: 'pending'
     if (it.status === 'completed') fill(ctx, nx + 3, ny, 1, 1, '#2e8a46');
     if (it.status === 'in_progress' && Math.floor(t / 600 + k) % 2 === 0) fill(ctx, nx, ny, 4, 1, '#e8f6ff');
   }
+}
+
+// ------------------------------------------------------------------ telão da sala (Bullroom)
+
+/**
+ * Altura (0 = topo, h-1 = base) de cada coluna do gráfico, para no máximo `w` colunas: amostra a série até caber,
+ * com a última coluna sempre no último ponto. A escala inclui o zero. Puro (testável).
+ */
+export function chartColumns(values: readonly number[], w: number, h: number): number[] {
+  const n = values.length;
+  if (n === 0 || w <= 0 || h <= 0) return [];
+  const cols = Math.min(w, n);
+  const min = Math.min(0, ...values);
+  const max = Math.max(0, ...values);
+  const span = max - min || 1;
+  const out: number[] = [];
+  for (let i = 0; i < cols; i++) {
+    const v = values[cols === 1 ? n - 1 : Math.round((i * (n - 1)) / (cols - 1))];
+    out.push(Math.round(((max - v) / span) * (h - 1)));
+  }
+  return out;
+}
+
+/** Telão da sala na lousa: fundo escuro, o PL da sala (`label`) em pixels e a linha da série, verde ou vermelha. */
+export function drawRoomChart(ctx: Ctx, r: Rect, series: readonly { pnlUsd: number }[], label: string): void {
+  const x = Math.round(r.x);
+  const y = Math.round(r.y);
+  const w = Math.round(r.w);
+  const h = Math.round(r.h);
+  clipTo(x, y, w, h);
+  fill(ctx, x, y, w, h, '#0e1a14');
+  const values = series.map((p) => p.pnlUsd);
+  const last = values.length ? values[values.length - 1] : 0;
+  const cents = Math.round(last * 100);
+  const color = cents > 0 ? '#4ade80' : cents < 0 ? '#f87171' : '#a1a9b8';
+  // texto: 5 px de altura no alto; sem largura para ele, só o gráfico
+  const textW = Math.max(0, [...label].length * 4 - 1);
+  const withText = h >= 12 && textW <= w - 2;
+  if (withText) pixelText(ctx, label, x + 1, y + 1, color);
+  const cy = withText ? y + 7 : y + 1;
+  const ch = y + h - 1 - cy;
+  if (ch < 2 || values.length === 0) return;
+  // linha do zero, pontilhada
+  const zeroY = cy + zeroRow(values, ch);
+  for (let i = 0; i < w; i += 2) fill(ctx, x + i, zeroY, 1, 1, '#2a4034');
+  const cols = chartColumns(values, w, ch);
+  let px = -1;
+  let py = -1;
+  cols.forEach((c, i) => {
+    const nx = cols.length === 1 ? x + w - 1 : x + Math.round((i * (w - 1)) / (cols.length - 1));
+    const ny = cy + c;
+    if (px >= 0) {
+      fill(ctx, px, py, nx - px, 1, color);
+      fill(ctx, nx, Math.min(py, ny), 1, Math.abs(ny - py) + 1, color);
+    } else fill(ctx, nx, ny, 1, 1, color);
+    px = nx;
+    py = ny;
+  });
+}
+
+/** Linha do zero na escala de chartColumns. */
+function zeroRow(values: readonly number[], h: number): number {
+  const min = Math.min(0, ...values);
+  const max = Math.max(0, ...values);
+  const span = max - min || 1;
+  return Math.round((max / span) * (h - 1));
 }
 
 // ------------------------------------------------------------------ janela
