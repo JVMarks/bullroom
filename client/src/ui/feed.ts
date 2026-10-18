@@ -6,7 +6,7 @@ import type { UiComponent, UiContext } from './context';
 import { h, KeyedList, setAttr, setHidden, setText, setTitle } from './dom';
 import { formatClock } from './format';
 import { ICONS } from './icons';
-import { shellDoneKind } from './model';
+import { shellDoneKind, tradingOffice } from './model';
 import { officeIsEmpty } from './overlays';
 import { createAccountChip, updateAccountChip } from './widgets';
 import { tr } from '../../../shared/i18n';
@@ -115,7 +115,11 @@ export class FeedPanel implements UiComponent {
     setHidden(this.empty, visible.length > 0 || officeIsEmpty(this.ctx));
     setText(
       this.empty,
-      filtering && this.items.length > 0 ? tr('Nenhum evento das contas selecionadas.') : tr('Os eventos dos agentes aparecem aqui assim que acontecem.'),
+      filtering && this.items.length > 0
+        ? tr('Nenhum evento das contas selecionadas.')
+        : tradingOffice(this.ctx.store.snapshot)
+          ? tr('As operações aparecem aqui assim que acontecem.')
+          : tr('Os eventos dos agentes aparecem aqui assim que acontecem.'),
     );
     setHidden(this.filterNote, !filtering);
     if (filtering) {

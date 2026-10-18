@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AccountInfo, AgentInfo, RoomInfo, ShellJob } from '../../../shared/types';
 import {
+  tradingOffice,
   accountsOf,
   activityFallback,
   aggregateTasks,
@@ -353,5 +354,15 @@ describe('textos da espera', () => {
     expect(shellDoneKind({ tool: 'ShellDone', error: true })).toBe('fail');
     expect(shellDoneKind({ tool: 'Bash', error: true })).toBeNull();
     expect(shellDoneKind(undefined)).toBeNull();
+  });
+});
+
+describe('tradingOffice (Bullroom)', () => {
+  it('escritório de trading = snapshot com carteira', () => {
+    const base = { rev: 1, serverTime: 0, rooms: [], agents: [], accounts: [], meta: { demo: false, sources: [], startedAt: 0, version: 'x' } };
+    expect(tradingOffice({ ...base, portfolio: { simulated: true, totalPnlUsd: 0, bots: 0, trading: 0, ejected: 0, series: [] } })).toBe(true);
+    expect(tradingOffice(base)).toBe(false);
+    expect(tradingOffice(null)).toBe(false);
+    expect(tradingOffice(undefined)).toBe(false);
   });
 });

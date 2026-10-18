@@ -17,7 +17,7 @@ export function start(): void {
   document.documentElement.lang = getLocale();
   document.querySelector('meta[name="description"]')?.setAttribute(
     'content',
-    tr('Escritório virtual em pixel art que mostra, em tempo real, o que seus agentes do Claude Code estão fazendo.'),
+    tr('Bullroom: seus robôs de trading como um escritório animado em pixel art. Um projeto bitcoin100treta (OpenSpread).'),
   );
 
   const params = new URLSearchParams(location.search);

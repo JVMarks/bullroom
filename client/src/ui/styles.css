@@ -11257,3 +11257,8 @@ html.is-replay #world {
   font-size: 10.5px;
   color: #7d8596;
 }
+
+/* Bullroom: nos modos de trading, os botões do Claude Code (Entregas, Meu dia, Mundo) somem. */
+.ui-topbar.is-trading [data-habblaud] {
+  display: none !important;
+}

@@ -214,6 +214,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   // Entregas: o que os agentes terminaram (primeiro botão do grupo: é o que mais se usa pelo celular).
   const deliveries = new Deliveries(ctx, terminal);
   topbar.panelGroup.prepend(deliveries.button);
+  // Bullroom: botões do Claude Code somem nos modos de trading (CSS em .ui-topbar.is-trading).
+  deliveries.button.setAttribute('data-habblaud', '1');
   // Links com ?agent= / ?delivery= (abrem o agente ou a entrega ao carregar).
   const openLink = (url: URL) => {
     const agent = url.searchParams.get('agent');

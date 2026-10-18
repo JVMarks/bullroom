@@ -3,7 +3,6 @@
 // Chave ausente = o texto fica em PT. `npm run i18n:check` lista os textos sem tradução e as chaves que sobraram.
 export const FR: Readonly<Record<string, string>> = {
   // client/src/main.ts
-  "Escritório virtual em pixel art que mostra, em tempo real, o que seus agentes do Claude Code estão fazendo.": "Bureau virtuel en pixel art qui montre, en temps réel, ce que font vos agents Claude Code.",
 
   // client/src/net/store.ts
   "Este pedido já foi respondido.": "Cette demande a déjà reçu une réponse.",
@@ -3324,4 +3323,10 @@ export const FR: Readonly<Record<string, string>> = {
   "Dados públicos ao vivo, só leitura: nenhuma chave, nenhuma ordem": "Données publiques en direct, lecture seule : aucune clé, aucun ordre",
   "{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.": "{0}. Spread net après frais d'achat et de vente ; sans coût de transfert entre plateformes.",
   "Núcleo do OpenSpread desligado: rode npm start na pasta core/": "Le cœur OpenSpread est arrêté : lancez npm start dans le dossier core/",
+
+  // Bullroom: limpeza dos modos de trading
+  "Robôs simulados no navegador (?mock=trading)": "Robots simulés dans le navigateur (?mock=trading)",
+  "Dados públicos do núcleo do OpenSpread (só leitura)": "Données publiques du cœur OpenSpread (lecture seule)",
+  "As operações aparecem aqui assim que acontecem.": "Les opérations apparaissent ici dès qu'elles ont lieu.",
+  "Bullroom: seus robôs de trading como um escritório animado em pixel art. Um projeto bitcoin100treta (OpenSpread).": "Bullroom : vos robots de trading en bureau animé en pixel art. Un projet bitcoin100treta (OpenSpread).",
 };

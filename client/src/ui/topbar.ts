@@ -5,7 +5,7 @@ import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText, setTitle, setVariant } from './dom';
 import { formatDuration, formatInt } from './format';
 import { FALLBACK_MARK, ICONS } from './icons';
-import { computeCounters, shellLine, shellWaitIn, shellWaitingAgents, waitingAgents, type Counters } from './model';
+import { computeCounters, shellLine, shellWaitIn, shellWaitingAgents, tradingOffice, waitingAgents, type Counters } from './model';
 import { TIMELAPSE_ICONS } from './timelapse';
 import { focusPermission, nextPermissionAgent, permissionAgents } from './permission';
 import { UsageCards } from './usage';
@@ -171,11 +171,15 @@ export class TopBar implements UiComponent {
 
   /** Botão Mundo (troca de cena), ao lado do Timelapse. */
   addSceneButton(btn: HTMLElement): void {
+    // Bullroom: o Mundo é do Claude Code; some nos modos de trading (data-habblaud)
+    btn.setAttribute('data-habblaud', '1');
     this.panelGroup.insertBefore(btn, this.timelapseBtn);
   }
 
   /** Acrescenta um botão de janela própria (ex.: Meu dia) ao começo do grupo de painéis. */
   addPanelButton(btn: HTMLElement): void {
+    // Bullroom: hoje só o Meu dia entra aqui, e ele é do Claude Code (some nos modos de trading)
+    btn.setAttribute('data-habblaud', '1');
     this.panelGroup.prepend(btn);
   }
 
@@ -190,9 +194,15 @@ export class TopBar implements UiComponent {
       conn === 'open' ? tr('Conectado') : conn === 'mock' ? tr('Simulação') : conn === 'closed' ? tr('Desconectado') : this.hadOpen ? tr('Reconectando…') : tr('Conectando…');
     setText(this.pillText, label);
     setVariant(this.pill, 'is-', conn);
+    const trading = tradingOffice(snap);
+    this.el.classList.toggle('is-trading', trading);
     setTitle(
       this.pill,
-      conn === 'mock'
+      trading
+        ? snap?.portfolio?.simulated
+          ? tr('Robôs simulados no navegador (?mock=trading)')
+          : tr('Dados públicos do núcleo do OpenSpread (só leitura)')
+        : conn === 'mock'
         ? tr('Dados simulados no navegador (?mock=1)')
         : conn === 'open'
           ? tr('Recebendo eventos do servidor em tempo real')

@@ -16,6 +16,11 @@ export const STATUS_LABEL: Record<AgentStatus, string> = {
 /** Ordem de urgência (menor = mais urgente), usada para destacar quem precisa de atenção. */
 const STATUS_URGENCY: Record<AgentStatus, number> = { waiting: 0, shell: 1, working: 2, idle: 3, done: 4, offline: 5 };
 
+/** Bullroom: escritório de trading (simulado ou ao vivo) = o snapshot traz a carteira. */
+export function tradingOffice(snap: OfficeSnapshot | null | undefined): boolean {
+  return !!snap?.portfolio;
+}
+
 export function statusLabel(status: AgentStatus): string {
   return STATUS_LABEL[status];
 }
