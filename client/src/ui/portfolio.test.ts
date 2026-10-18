@@ -9,6 +9,10 @@ describe('carteira na barra do topo (Bullroom)', () => {
     expect(portfolioLine({ ...P, totalPnlUsd: -1.5, bots: 1, trading: 0 }, 'pt-BR')).toBe('-$1,50 · 1 robô · 0 em operação');
   });
 
+  it('ao vivo: melhor spread líquido em % e corretoras online', () => {
+    expect(portfolioLine({ ...P, simulated: false, unit: 'pct', totalPnlUsd: -0.202, bots: 5 }, 'pt-BR')).toBe('-0,20% · melhor spread líquido · 5 corretoras');
+  });
+
   it('pontos do mini-gráfico: cabem na caixa e o último decide a cor', () => {
     expect(sparkPoints([], 80, 20)).toEqual({ points: [], up: true });
     const s = sparkPoints([{ at: 0, pnlUsd: 0 }, { at: 1, pnlUsd: 2 }, { at: 2, pnlUsd: -2 }], 80, 20);

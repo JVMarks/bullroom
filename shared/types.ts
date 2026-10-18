@@ -6,7 +6,7 @@
 
 import type { AppearanceParts } from './appearance';
 import type { WorldMeta } from './world/api';
-import type { BotTrading, PortfolioInfo, RoomTrading } from './trading/types';
+import type { BotTrading, PortfolioInfo, RoomTrading, ValueUnit } from './trading/types';
 
 export type AgentKind = 'main' | 'sub';
 
@@ -189,6 +189,8 @@ export interface AgentInfo {
   canMessage?: boolean;
   /** Bullroom: o agente é um robô de trading (estado, PL e limite). Ausente = agente comum. */
   trading?: BotTrading;
+  /** Bullroom: balão de valor sobre a cabeça de quem não é robô (ex.: corretora observada, em pontos-base). */
+  badge?: { value: number; unit: ValueUnit };
 }
 
 export interface RoomInfo {

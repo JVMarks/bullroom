@@ -9,6 +9,14 @@ import { tr } from '../../../shared/i18n';
 /** Depois de quanto tempo sem conexão o aviso aparece. */
 const DISCONNECTED_BANNER_MS = 8_000;
 
+/** Texto da tela de carregamento. Com o núcleo do OpenSpread (?source=core), diz como ligá-lo. Puro (testável). */
+export function splashText(connection: string, waitedMs: number, core: boolean): string {
+  if (core && (connection === 'closed' || waitedMs > DISCONNECTED_BANNER_MS)) return tr('Núcleo do OpenSpread desligado: rode npm start na pasta core/');
+  if (waitedMs > DISCONNECTED_BANNER_MS) return tr('O servidor do Habblaud não responde. Confira se ele está rodando (npm run dev ou npm start); seguimos tentando.');
+  if (connection === 'closed') return tr('Não foi possível conectar ao servidor do Habblaud. Tentando de novo…');
+  return tr('Conectando ao escritório…');
+}
+
 function brandMark(size: number): HTMLElement {
   const mark = h('span', { class: 'ui-brand__mark' });
   const img = h('img', { attrs: { src: '/assets/brand/logo-mark@4x.png', alt: '', width: size, height: size, draggable: 'false' } });
@@ -47,10 +55,7 @@ export class Splash implements UiComponent {
       return;
     }
     const waited = performance.now() - this.startedAt;
-    let text = tr('Conectando ao escritório…');
-    if (waited > DISCONNECTED_BANNER_MS) text = tr('O servidor do Habblaud não responde. Confira se ele está rodando (npm run dev ou npm start); seguimos tentando.');
-    else if (store.connection === 'closed') text = tr('Não foi possível conectar ao servidor do Habblaud. Tentando de novo…');
-    setText(this.text, text);
+    setText(this.text, splashText(store.connection, waited, store.core));
     // Reavalia o texto mesmo sem eventos novos.
     this.tick ??= setTimeout(() => {
       this.tick = null;

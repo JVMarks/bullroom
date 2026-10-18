@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OfficeSnapshot } from '../../../shared/types';
-import { mockOptionsFrom, OfficeStore, pageBuild, reconnectDelay, tradingOptionsFrom, type EventSourceLike } from './store';
+import { CORE_STREAM_URL, mockOptionsFrom, OfficeStore, pageBuild, reconnectDelay, tradingOptionsFrom, type EventSourceLike } from './store';
 
 /** EventSource falso: o teste dispara open/error e muda o readyState. */
 class FakeSource implements EventSourceLike {
@@ -339,3 +339,70 @@ describe('personagem do projeto (store)', () => {
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
 });
+
+describe('?source=core (OpenSpread core)', () => {
+  const STATE = {
+    rev: 1,
+    at: 1_760_000_000_000,
+    exchanges: [{ id: 'binance', ok: true, lastAt: 1 }, { id: 'okx', ok: true, lastAt: 1 }],
+    pairs: [
+      {
+        pair: 'USDC/USDT',
+        quotes: [
+          { exchange: 'binance', pair: 'USDC/USDT', bid: 1.0012, ask: 1.0013, takerFee: 0.001, at: 1, inverted: false },
+          { exchange: 'okx', pair: 'USDC/USDT', bid: 1.0014, ask: 1.0015, takerFee: 0.0015, at: 1, inverted: false },
+        ],
+        best: { pair: 'USDC/USDT', buyOn: 'binance', sellOn: 'okx', grossPct: 0.01, netPct: -0.24 },
+      },
+    ],
+  };
+  let urls: string[];
+  let sources: FakeSource[];
+  let store: OfficeStore;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    urls = [];
+    sources = [];
+    store = new OfficeStore({
+      mock: true,
+      search: '?source=core',
+      eventSource: (url) => {
+        urls.push(url);
+        const src = new FakeSource();
+        sources.push(src);
+        return src;
+      },
+    });
+  });
+
+  afterEach(() => {
+    store.disconnect();
+    vi.useRealTimers();
+  });
+
+  it('conecta no stream do núcleo e vira sala', () => {
+    store.connect();
+    expect(urls).toEqual([CORE_STREAM_URL]);
+    sources[0].open();
+    expect(store.connection).toBe('open');
+    sources[0].fire('state', STATE);
+    expect(store.snapshot?.rooms.map((r) => r.name)).toEqual(['USDC/USDT']);
+    expect(store.snapshot?.portfolio).toMatchObject({ simulated: false, unit: 'pct' });
+  });
+
+  it('núcleo desligado: avisa uma vez e tenta de novo', () => {
+    const notices: string[] = [];
+    store.on('notice', (n) => notices.push(n.text));
+    store.connect();
+    sources[0].fail();
+    expect(store.connection).toBe('closed');
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toContain('npm start');
+    vi.advanceTimersByTime(5_000);
+    expect(sources).toHaveLength(2);
+    sources[1].fail();
+    expect(notices).toHaveLength(1);
+  });
+});
+

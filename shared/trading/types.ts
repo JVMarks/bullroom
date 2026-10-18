@@ -3,6 +3,9 @@
 
 export type BotPosition = 'long' | 'short' | 'flat';
 
+/** Unidade de um valor mostrado (balão, placa, telão, carteira). Ausente = 'usd'. */
+export type ValueUnit = 'usd' | 'pct' | 'bp';
+
 /** Estado de trading de um robô. Vai em AgentInfo.trading. */
 export interface BotTrading {
   /** Nome da corretora (ex.: "Binance"). */
@@ -41,14 +44,18 @@ export interface BotStats {
 
 /** PL de uma sala (soma dos robôs, ejetados inclusive). Vai em RoomInfo.trading. */
 export interface RoomTrading {
+  /** Valor da sala; com `unit` 'pct', o melhor spread líquido (ex.: -0,19 = -0,19%). */
   pnlUsd: number;
+  unit?: ValueUnit;
   series: Array<{ at: number; pnlUsd: number }>;
 }
 
 /** Resumo da carteira. Vai em OfficeSnapshot.portfolio. */
 export interface PortfolioInfo {
-  /** true = dados do simulador (a interface mostra o selo SIMULATED). */
+  /** true = dados do simulador (a interface mostra o selo SIMULATED); false = ao vivo, só leitura. */
   simulated: boolean;
+  /** Unidade de `totalPnlUsd` e da série (ausente = 'usd'). */
+  unit?: ValueUnit;
   totalPnlUsd: number;
   /** Robôs presentes no snapshot. */
   bots: number;

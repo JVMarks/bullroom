@@ -15,8 +15,8 @@ import { buildAnim } from './anim';
 import { drawFxBanner } from './github-fx';
 import type { HeadInfo, Renderer } from './renderer';
 import { intlLocale, tr } from '../../../../shared/i18n';
-import { formatPnl, pnlTone } from '../../../../shared/trading/rules';
-import type { PnlTone } from '../../../../shared/trading/types';
+import { formatPnl, formatValue, pnlTone } from '../../../../shared/trading/rules';
+import type { PnlTone, ValueUnit } from '../../../../shared/trading/types';
 import type { AgentInfo } from '../../../../shared/types';
 
 // A Pixelify Sans tem o "C" maiúsculo quase fechado (lê-se "Oopa" em vez de "Copa") em qualquer
@@ -63,18 +63,21 @@ export function roomPillParts(
   pnl: number | undefined,
   locale: string,
   fits: (parts: { name: string; count: string; pnl: string }) => boolean,
+  unit?: ValueUnit,
 ): { name: string; count: string; pnl: string; tone: PnlTone } {
-  const parts = { name, count: count > 0 ? String(count) : '', pnl: pnl === undefined ? '' : formatPnl(pnl, locale).replace('$', '') };
+  const parts = { name, count: count > 0 ? String(count) : '', pnl: pnl === undefined ? '' : formatValue(pnl, unit, locale).replace('$', '') };
   const tone: PnlTone = pnl === undefined ? 'zero' : pnlTone(pnl);
   if (parts.pnl && parts.count && !fits(parts)) parts.count = '';
   return { ...parts, tone };
 }
 
 /** Texto e tom do balão de PL de um robô; null para agentes que não são de trading. Puro (testável). */
-export function pnlBadge(agent: Pick<AgentInfo, 'trading'>, locale: string): { text: string; tone: PnlTone } | null {
+export function pnlBadge(agent: Pick<AgentInfo, 'trading' | 'badge'>, locale: string): { text: string; tone: PnlTone } | null {
   const t = agent.trading;
-  if (!t) return null;
-  return { text: formatPnl(t.pnlUsd, locale), tone: pnlTone(t.pnlUsd) };
+  if (t) return { text: formatPnl(t.pnlUsd, locale), tone: pnlTone(t.pnlUsd) };
+  // corretora observada (núcleo do OpenSpread): valor em outra unidade
+  const b = agent.badge;
+  return b ? { text: formatValue(b.value, b.unit, locale), tone: pnlTone(b.value) } : null;
 }
 /** Abaixo deste zoom (visão geral), os balões de atividade são racionados. */
 export const OVERVIEW_ZOOM = 1.8;
@@ -365,7 +368,7 @@ export class Overlay {
       const labeled = selected || hovered || ch.mode === 'wait' || showAll || visitor;
       const above = labeled && this.labelAbove(ch);
       // Bullroom: o balão de PL fica logo acima da cabeça (ou da etiqueta); o de atividade sobe por cima dele
-      const pnlLift = ch.info.trading && zoom >= TINY_ZOOM ? this.drawPnl(ch, head, above, now) : 0;
+      const pnlLift = (ch.info.trading || ch.info.badge) && zoom >= TINY_ZOOM ? this.drawPnl(ch, head, above, now) : 0;
       const b = this.bubbleFor(ch, head, now, opts, selected, hovered);
       if (b) {
         b.extraLift = (above ? LABEL_H + 3 : 0) + pnlLift;
@@ -531,7 +534,7 @@ export class Overlay {
       if (room) {
         // endereço antigo de uma mudança: o nome já está na sala nova
         if (!room.present || room.ghost || (anim && anim.walls < 0.6)) continue;
-        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd);
+        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd, room.info.trading?.unit);
       } else if (CORE_NAMES[vis.id]) {
         this.drawCorePill(CORE_NAMES[vis.id], cx, cy, colW - 8);
       }
@@ -602,12 +605,12 @@ export class Overlay {
     }
   }
 
-  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number): void {
+  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number, unit?: ValueUnit): void {
     const { ctx } = this;
     let dots = accounts.filter((a) => this.sim.accounts.has(a));
     // Bullroom: PL da sala na placa; sem espaço, ele fica e a contagem sai
     const chipW = (t: string) => (t ? this.measure(LABEL_FONT, t) + 14 : 0);
-    const parts = roomPillParts(name, count, pnl, intlLocale(), (p) => this.measure(ROOM_FONT, p.name) + 18 + dots.length * 10 + chipW(p.count) + chipW(p.pnl) <= maxW);
+    const parts = roomPillParts(name, count, pnl, intlLocale(), (p) => this.measure(ROOM_FONT, p.name) + 18 + dots.length * 10 + chipW(p.count) + chipW(p.pnl) <= maxW, unit);
     const pnlText = parts.pnl;
     const pw = chipW(pnlText);
     maxW -= pw;

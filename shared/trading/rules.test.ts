@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { botStatus, formatPnl, pnlTone, shouldEject } from './rules';
+import { botStatus, formatPnl, formatValue, pnlTone, shouldEject } from './rules';
 import type { BotTrading } from './types';
 
 const bot = (over: Partial<BotTrading> = {}): BotTrading => ({
@@ -44,5 +44,16 @@ describe('formatPnl: sinal sempre, $ antes, decimal do idioma', () => {
     expect(formatPnl(-0.39, 'en')).toBe('-$0.39');
     expect(formatPnl(-0.004, 'pt-BR')).toBe('+$0,00');
     expect(formatPnl(1234.5, 'en')).toBe('+$1,234.50');
+  });
+});
+
+describe('formatValue: cada unidade no seu formato', () => {
+  it('usd, pct e bp', () => {
+    expect(formatValue(4.01, 'usd', 'pt-BR')).toBe('+$4,01');
+    expect(formatValue(-0.202, 'pct', 'pt-BR')).toBe('-0,20%');
+    expect(formatValue(0.004, 'pct', 'en')).toBe('+0.00%');
+    expect(formatValue(1.26, 'bp', 'pt-BR')).toBe('+1,3 bp');
+    expect(formatValue(-0.98, 'bp', 'en')).toBe('-1.0 bp');
+    expect(formatValue(4.01, undefined, 'pt-BR')).toBe('+$4,01');
   });
 });

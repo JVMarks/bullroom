@@ -22,7 +22,7 @@ import { Particles } from './particles';
 import { carSprite, propSprite, shadowSprite } from './props';
 import { countBadge, fallbackIcon } from './shell-sprites';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalCostume, seasonalFurniture } from './seasonal';
-import { formatPnl } from '../../../../shared/trading/rules';
+import { formatValue } from '../../../../shared/trading/rules';
 import { intlLocale } from '../../../../shared/i18n';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
 
@@ -626,7 +626,7 @@ export class Renderer {
         const board = r && { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h };
         // Bullroom: sala de trading vira telão com o PL da sala; sala comum mantém o quadro de tarefas
         const trading = vis.room?.info.trading;
-        if (board && trading) this.safe(() => this.art.drawRoomChart(ctx, board, trading.series, formatPnl(trading.pnlUsd, intlLocale()).replace('$', '')));
+        if (board && trading) this.safe(() => this.art.drawRoomChart(ctx, board, trading.series, formatValue(trading.pnlUsd, trading.unit, intlLocale()).replace('$', '').replace('%', '')));
         else if (board) this.safe(() => this.art.drawBoard(ctx, board, vis.room?.board ?? [], now));
         return;
       }

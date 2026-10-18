@@ -49,6 +49,9 @@ describe('visão geral', () => {
 describe('balão de PL (Bullroom)', () => {
   const agent = (trading?: AgentInfo['trading']) => ({ trading }) as AgentInfo;
 
+  it('corretora observada: balão em pontos-base', () => {
+    expect(pnlBadge({ badge: { value: -0.98, unit: 'bp' } } as AgentInfo, 'pt-BR')).toEqual({ text: '-1,0 bp', tone: 'loss' });
+  });
   it('só para robôs de trading', () => {
     expect(pnlBadge(agent(undefined), 'pt-BR')).toBeNull();
   });
@@ -69,6 +72,9 @@ describe('placa da sala com PL (Bullroom)', () => {
   it('sem espaço para tudo: o PL fica, a contagem sai', () => {
     const noCount = (p: { count: string }) => p.count === '';
     expect(roomPillParts('BTC/USDT', 6, -3.5, 'pt-BR', noCount)).toEqual({ name: 'BTC/USDT', count: '', pnl: '-3,50', tone: 'loss' });
+  });
+  it('sala ao vivo: spread líquido em %', () => {
+    expect(roomPillParts('USDC/USDT', 5, -0.202, 'pt-BR', all, 'pct')).toMatchObject({ pnl: '-0,20%', tone: 'loss' });
   });
   it('sala comum (sem PL): igual ao habblaud', () => {
     expect(roomPillParts('loja', 2, undefined, 'pt-BR', all)).toEqual({ name: 'loja', count: '2', pnl: '', tone: 'zero' });

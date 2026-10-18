@@ -3299,4 +3299,12 @@ export const EN: Readonly<Record<string, string>> = {
   "vendido": "short",
   "zerado": "flat",
   "{0} em {1}": "{0} in {1}",
+
+  // OpenSpread core (Bullroom ?source=core)
+  "{0} · melhor spread líquido · {1}": "{0} · best net spread · {1}",
+  "1 corretora": "1 exchange",
+  "{0} corretoras": "{0} exchanges",
+  "Dados públicos ao vivo, só leitura: nenhuma chave, nenhuma ordem": "Live public data, read-only: no keys, no orders",
+  "{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.": "{0}. Net spread after buy and sell fees; transfer costs between exchanges not included.",
+  "Núcleo do OpenSpread desligado: rode npm start na pasta core/": "OpenSpread core is off: run npm start in the core/ folder",
 };

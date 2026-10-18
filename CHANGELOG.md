@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Dados reais, só leitura (`?source=core`).** Com o núcleo do OpenSpread rodando (`npm start` em `core/`), cada
+  par de stablecoins vira uma sala e cada corretora um personagem: o balão mostra a distância dela para o preço médio
+  (em pontos-base), a placa e o telão o melhor spread líquido (%), e a barra do topo o melhor spread do momento com
+  o selo LIVE · READ-ONLY. Núcleo desligado: a tela diz como ligá-lo e continua tentando.
 - **Robôs de trading simulados (`?mock=trading`).** Uma sala por par de moedas, até 6 robôs por sala (`&bots=54`,
   `&speed=10`, `&seed=7`). Posicionado opera na mesa, zerado circula, quem bate o limite de perda diária é ejetado.
 - **PL sobre a cabeça** de cada robô (verde, vermelho ou cinza), que só pisca quando o valor muda.

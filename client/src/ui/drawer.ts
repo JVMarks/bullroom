@@ -669,7 +669,7 @@ class AgentView {
     // Bullroom: robô de trading mostra o cartão e esconde o que é do Claude Code (terminal, mensagem, tarefas,
     // subagentes, tokens) e a vida social (moedinhas e apostas não combinam com trading); agente comum fica igual.
     this.botCard.render(a, now);
-    if (a.trading) for (const el of [this.termBtn, this.termWhy, this.msgSec.el, this.social.el, this.tasksSec.el, this.teamSec.el, this.statsSecEl]) setHidden(el, true);
+    if (a.trading || a.badge) for (const el of [this.termBtn, this.termWhy, this.msgSec.el, this.social.el, this.tasksSec.el, this.teamSec.el, this.statsSecEl]) setHidden(el, true);
 
     // Codex: como ter o ao vivo e as aprovações por aqui (o servidor ainda não diz se os hooks dele estão ligados).
     setHidden(this.codexHint, !codex || a.kind !== 'main' || !live || this.ctx.store.replaying);

@@ -21,7 +21,8 @@ export function start(): void {
   );
 
   const params = new URLSearchParams(location.search);
-  const store = new OfficeStore({ mock: params.has('mock') });
+  // ?source=core: dados reais do núcleo local do OpenSpread; como o mock, roda sem o servidor do Bullroom.
+  const store = new OfficeStore({ mock: params.has('mock') || params.get('source') === 'core' });
   const worldCanvas = document.getElementById('world') as HTMLCanvasElement;
   const uiRoot = document.getElementById('ui') as HTMLElement;
   const world = createWorld(worldCanvas, store);

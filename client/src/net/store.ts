@@ -8,6 +8,12 @@ import type { AppearanceParts } from '../../../shared/appearance';
 import type { Activity, AgentDetail, AgentInfo, FeedItem, Notice, OfficeSnapshot, OutboxMessage, PermissionDecision, PermissionRequestInfo, RoomInfo } from '../../../shared/types';
 import { DemoSimulator } from '../../../shared/demo/simulator';
 import { TradingSimulator, type TradingSimOptions } from '../../../shared/trading/simulator';
+import { CoreOffice } from '../../../shared/core/to-office';
+import type { CoreState } from '../../../shared/core/types';
+
+/** Stream do núcleo local do OpenSpread (core/, `npm start`). Só 127.0.0.1. */
+export const CORE_STREAM_URL = 'http://127.0.0.1:4848/v1/stream';
+const CORE_RETRY_MS = 5_000;
 import { tr } from '../../../shared/i18n';
 
 export type ConnectionState = 'connecting' | 'open' | 'closed' | 'mock';
@@ -104,6 +110,8 @@ export class OfficeStore {
   feed: FeedItem[] = [];
   connection: ConnectionState = 'connecting';
   readonly mock: boolean;
+  /** ?source=core: os dados vêm do núcleo local do OpenSpread. */
+  readonly core: boolean;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private listeners = new Map<keyof StoreEvents, Set<(value: any) => void>>();
@@ -129,6 +137,7 @@ export class OfficeStore {
   constructor(opts: StoreOptions = {}) {
     this.mock = !!opts.mock;
     this.search = opts.search ?? (typeof location !== 'undefined' ? location.search : '');
+    this.core = new URLSearchParams(this.search).get('source') === 'core';
     this.openStream = opts.eventSource ?? ((url) => new EventSource(url));
   }
 
@@ -153,6 +162,8 @@ export class OfficeStore {
     this.closeSource();
     if (this.mockTimer) clearInterval(this.mockTimer);
     this.mockTimer = null;
+    if (this.coreRetry) clearTimeout(this.coreRetry);
+    this.coreRetry = null;
   }
 
   /** Reconecta imediatamente (botão "Tentar agora"), sem esperar o próximo intervalo. */
@@ -515,7 +526,55 @@ export class OfficeStore {
   /** Simulador do modo ?mock=1 (também responde os pedidos de permissão fictícios). */
   private mockSim: DemoSimulator | null = null;
 
+  /** ?source=core: dados reais do núcleo local do OpenSpread (só leitura), sem o servidor do Bullroom. */
+  private coreRetry: ReturnType<typeof setTimeout> | null = null;
+  private coreWarned = false;
+
+  private startCore(office = new CoreOffice()): void {
+    this.setConnection('connecting');
+    let es: EventSourceLike;
+    try {
+      es = this.openStream(CORE_STREAM_URL);
+    } catch (err) {
+      console.error('[store] não foi possível abrir o stream do núcleo', err);
+      return this.coreDown(office);
+    }
+    this.source = es;
+    const current = () => this.source === es && !this.stopped;
+    es.addEventListener('open', () => {
+      if (!current()) return;
+      this.coreWarned = false;
+      this.setConnection('open');
+    });
+    es.addEventListener('error', () => {
+      if (!current()) return;
+      if (es.readyState === ES_CLOSED) this.coreDown(office);
+      else this.setConnection('connecting');
+    });
+    es.addEventListener('state', (ev) => {
+      if (!current()) return;
+      const state = this.parse<CoreState>(ev, 'estado do núcleo');
+      if (state) this.applySnapshot(office.apply(state));
+    });
+  }
+
+  /** Núcleo fora do ar: avisa uma vez por queda e tenta de novo daqui a pouco, com a mesma sala (séries mantidas). */
+  private coreDown(office: CoreOffice): void {
+    this.setConnection('closed');
+    this.closeSource();
+    if (!this.coreWarned) {
+      this.coreWarned = true;
+      this.emit('notice', { id: `core-down-${Date.now()}`, level: 'warn', text: tr('Núcleo do OpenSpread desligado: rode npm start na pasta core/'), at: Date.now() });
+    }
+    if (this.coreRetry) clearTimeout(this.coreRetry);
+    this.coreRetry = setTimeout(() => {
+      this.coreRetry = null;
+      if (!this.stopped) this.startCore(office);
+    }, CORE_RETRY_MS);
+  }
+
   private startMock(): void {
+    if (this.core) return this.startCore();
     if (this.mockTimer) return;
     this.setConnection('mock');
     // ?mock=trading: robôs de trading simulados (Bullroom); sem pedidos de permissão nem mensagens.
