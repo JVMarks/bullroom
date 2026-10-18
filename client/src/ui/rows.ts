@@ -1,4 +1,5 @@
 // Linha de agente (avatar, nome, conta, papel, status e atividade), usada na barra lateral e na gaveta.
+import { tradingActivityFallback, tradingRoleLabel, tradingStatusLabel } from './trading-labels';
 import type { AccountInfo, AgentInfo } from '../../../shared/types';
 import { createAvatar, updateAvatar, type AvatarSize } from './avatar';
 import { h, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
@@ -74,13 +75,16 @@ export function updateAgentRow(
   setStyleVar(row, '--acc', account?.color ?? '#8b98b3');
   setText(r.name, agent.name);
   updateAccountChip(r.chip, account, agent.account, agent.provider);
+  // Bullroom: robô e corretora não têm conta do Claude Code
+  const tradingStatus = tradingStatusLabel(agent);
+  setHidden(r.chip, tradingStatus !== null);
   updateRoleBadge(r.role, agent);
   const title = agent.title?.trim() ?? '';
   setText(r.task, title);
   setTitle(r.task, title);
   setHidden(r.task, !title);
   // Agente principal ocioso há 1 min ou mais: o tempo aparece no lugar do "Principal".
-  const idleFor = agent.kind === 'main' && agent.status === 'idle' && agent.statusSince ? now - agent.statusSince : 0;
+  const idleFor = agent.kind === 'main' && agent.status === 'idle' && agent.statusSince && tradingStatus === null ? now - agent.statusSince : 0;
   const showIdle = idleFor >= 60_000;
   setText(r.since, showIdle ? tr('ocioso {0}', [formatDuration(idleFor)]) : '');
   setTitle(r.since, showIdle ? tr('Ocioso há {0}', [formatDuration(idleFor)]) : '');
@@ -90,13 +94,22 @@ export function updateAgentRow(
   const wait = shellWaitIn(agent, agents, now);
   const status = wait ? 'shell' : agent.status;
   updateStatusDot(r.dot, status);
+  if (tradingStatus !== null) {
+    setAttr(r.dot, 'aria-label', tradingStatus);
+    setTitle(r.dot, tradingStatus);
+  }
   if (wait) updateShellActivityLine(r.activity, wait, now);
-  else updateActivityLine(r.activity, agent.activity, activityFallback(agent));
+  else updateActivityLine(r.activity, agent.activity, tradingActivityFallback(agent) ?? activityFallback(agent));
   setVariant(row, 'is-', status);
   row.classList.toggle('is-selected', selected);
   setAttr(row, 'aria-current', selected ? 'true' : null);
   // Para leitores de tela, o tempo em minutos (o cronômetro mudaria o rótulo a cada segundo).
   const doing = wait ? tr('{0}, há {1}', [shellLine(wait, now).label, formatDuration(now - wait.since)]) : agent.activity?.text;
+  const tradingRole = tradingRoleLabel(agent);
+  if (tradingStatus !== null && tradingRole !== null) {
+    setAttr(row, 'aria-label', `${agent.name}, ${tradingRole}, ${tradingStatus}${doing ? `: ${doing}` : ''}`);
+    return;
+  }
   setAttr(
     row,
     'aria-label',

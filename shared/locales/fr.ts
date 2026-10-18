@@ -3329,4 +3329,14 @@ export const FR: Readonly<Record<string, string>> = {
   "Dados públicos do núcleo do OpenSpread (só leitura)": "Données publiques du cœur OpenSpread (lecture seule)",
   "As operações aparecem aqui assim que acontecem.": "Les opérations apparaissent ici dès qu'elles ont lieu.",
   "Bullroom: seus robôs de trading como um escritório animado em pixel art. Um projeto bitcoin100treta (OpenSpread).": "Bullroom : vos robots de trading en bureau animé en pixel art. Un projet bitcoin100treta (OpenSpread).",
+
+  // Bullroom: rótulos de robôs e corretoras
+  "ejetado": "éjecté",
+  "corretora": "plateforme",
+  "Ejetado": "Éjecté",
+  "Zerado": "Sans position",
+  "Operando": "En position",
+  "Corretora": "Plateforme",
+  "sem operação ainda": "aucune opération encore",
+  "Clique para ver a sala": "Cliquez pour voir la salle",
 };

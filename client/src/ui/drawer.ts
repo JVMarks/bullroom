@@ -1,5 +1,6 @@
 // Gaveta de detalhes (direita): agente ou sala selecionados. Agente do Codex: selo "Codex", textos dele (onde
 // responder, o terminal, a aprovação no lugar do modo de permissão, sem custo) e a dica dos hooks do Codex.
+import { tradingActivityFallback, tradingHeading, tradingStatusLabel } from './trading-labels';
 import { BotCard } from './bot-card';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
 import { roomTheme } from '../art';
@@ -556,6 +557,8 @@ class AgentView {
     setText(this.accEmail, accSub);
     setHidden(this.accEmail, !accSub);
     setText(this.roomName, room?.name ?? a.roomId);
+    // Bullroom: robô e corretora não têm conta (chip, nome, e-mail)
+    if (a.trading || a.badge) for (const el of [this.accChip, this.accName, this.accProv, this.accEmail]) setHidden(el, true);
     setTitle(this.roomBtn, room ? tr('{0}\nClique para ver a sala', [room.path]) : '');
     setHidden(this.gone, !!live);
     this.el.classList.toggle('is-gone', !live);
@@ -564,7 +567,7 @@ class AgentView {
     const wait = live ? shellWaitIn(a, this.ctx.store.snapshot?.agents ?? [], now) : null;
     const status = wait ? 'shell' : a.status;
     updateStatusDot(this.dot, status);
-    setText(this.statusText, statusLabel(status));
+    setText(this.statusText, tradingStatusLabel(a) ?? statusLabel(status));
     // Parado num comando longo: o "desde" é o início do comando (o status do servidor continua 'working').
     const since = wait?.foreground ? wait.since : a.statusSince;
     setText(this.statusSince, relativeTime(since, now));
@@ -613,7 +616,7 @@ class AgentView {
     // Atividade atual.
     const act = a.activity;
     setText(this.actIcon, act?.icon ?? '·');
-    setText(this.actText, act?.text ?? activityFallback(a));
+    setText(this.actText, act?.text ?? tradingActivityFallback(a) ?? activityFallback(a));
     // A duração só entra quando o texto ainda não a traz ("Concluiu em 33s" já diz quanto levou).
     const showDuration = !!act?.durationMs && act.kind !== 'done' && !/\d\s?(?:ms|s|min|h)\b/.test(act.text);
     setText(this.actTime, act ? `${relativeTime(act.at, now)}${showDuration ? ` · levou ${formatDuration(act.durationMs!)}` : ''}` : '');
@@ -1028,7 +1031,8 @@ export class Drawer implements UiComponent {
     if (sel?.type === 'agent') {
       if (this.agentView.agentId !== sel.id) this.body.scrollTop = 0;
       this.agentView.open(sel.id);
-      setText(this.heading, this.ctx.agent(sel.id)?.kind === 'sub' ? tr('Subagente') : tr('Agente'));
+      const selAgent = this.ctx.agent(sel.id);
+      setText(this.heading, (selAgent && tradingHeading(selAgent)) ?? (selAgent?.kind === 'sub' ? tr('Subagente') : tr('Agente')));
       this.agentView.render();
     } else if (sel?.type === 'room') {
       if (this.roomView.roomId !== sel.id) this.body.scrollTop = 0;

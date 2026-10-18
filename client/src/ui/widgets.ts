@@ -1,5 +1,6 @@
 // Peças visuais reutilizadas pelos painéis: chip de conta (e o selo "Codex"), ponto de status, selo de papel, barra
 // de progresso.
+import { tradingRoleLabel } from './trading-labels';
 import type { AccountInfo, Activity, AgentInfo, AgentStatus, Provider } from '../../../shared/types';
 import { h, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
 import { WORDMARK } from './icons';
@@ -52,7 +53,15 @@ export function createRoleBadge(): HTMLElement {
   return h('span', { class: 'ui-role' });
 }
 
-export function updateRoleBadge(badge: HTMLElement, agent: Pick<AgentInfo, 'kind' | 'role' | 'background'>): void {
+export function updateRoleBadge(badge: HTMLElement, agent: Pick<AgentInfo, 'kind' | 'role' | 'background' | 'trading' | 'badge'>): void {
+  // Bullroom: robô mostra a posição; corretora observada, "corretora"
+  const trading = tradingRoleLabel(agent);
+  if (trading) {
+    setText(badge, trading);
+    setVariant(badge, 'ui-role--', 'main');
+    setTitle(badge, trading);
+    return;
+  }
   setText(badge, agent.kind === 'main' ? tr('Principal') : agent.role || tr('Subagente'));
   setVariant(badge, 'ui-role--', agent.kind);
   setTitle(badge, agent.kind === 'main' ? tr('Agente principal') : tr('Subagente: {0}{1}', [agent.role, agent.background ? tr(' (em segundo plano)') : '']));

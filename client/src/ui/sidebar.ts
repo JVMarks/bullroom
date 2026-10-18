@@ -250,10 +250,14 @@ export class Sidebar implements UiComponent {
     const present = g.agents.filter((a) => a.status !== 'offline').length;
     setText(r.count, String(present));
     setTitle(r.count, plural(present, tr('agente'), tr('agentes')));
-    setText(r.path, shortPath(g.room.path));
-    setTitle(r.head, tr('{0}\nClique para ver a sala', [g.room.path]));
+    // Bullroom: sala de trading não tem pasta (o caminho seria sim:// ou openspread://)
+    const tradingRoom = !!g.room.trading;
+    setText(r.path, tradingRoom ? '' : shortPath(g.room.path));
+    setHidden(r.path, tradingRoom);
+    setTitle(r.head, tradingRoom ? tr('Clique para ver a sala') : tr('{0}\nClique para ver a sala', [g.room.path]));
     setAttr(r.head, 'aria-label', tr('Sala {0}, {1}', [g.room.name, plural(present, tr('agente'), tr('agentes'))]));
-    r.accs.sync(g.accounts.map((id) => this.ctx.account(id) ?? id));
+    // Bullroom: sala de trading não tem conta do Claude Code (o chip "S"/"C" sairia)
+    r.accs.sync(tradingRoom ? [] : g.accounts.map((id) => this.ctx.account(id) ?? id));
     const selected = sel?.type === 'room' && sel.id === g.room.id;
     r.head.classList.toggle('is-selected', selected);
     setAttr(r.head, 'aria-current', selected ? 'true' : null);
