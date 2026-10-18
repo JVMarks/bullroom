@@ -18,6 +18,31 @@ export interface BotTrading {
   dailyLossLimitUsd: number;
   /** Epoch ms da ejeção. Presente = ejetado (não volta a operar no dia). */
   ejectedAt?: number;
+  /** Capital alocado ao robô (base da comparação com segurar BTC). */
+  capitalUsd?: number;
+  /** Estatísticas para o cartão do robô. */
+  stats?: BotStats;
+}
+
+/** Estatísticas de um robô (cartão do robô). */
+export interface BotStats {
+  /** Posições fechadas (inclui a fechada pela ejeção). */
+  trades: number;
+  /** Posições fechadas com o PL acima do da abertura. */
+  wins: number;
+  peakPnlUsd: number;
+  maxDrawdownUsd: number;
+  /** PL do robô ao longo do tempo (máx. 360 pontos). */
+  series: Array<{ at: number; pnlUsd: number }>;
+  /** Preço do BTC quando o robô começou e agora (comparação com segurar BTC). */
+  btcStartUsd: number;
+  btcNowUsd: number;
+}
+
+/** PL de uma sala (soma dos robôs, ejetados inclusive). Vai em RoomInfo.trading. */
+export interface RoomTrading {
+  pnlUsd: number;
+  series: Array<{ at: number; pnlUsd: number }>;
 }
 
 /** Resumo da carteira. Vai em OfficeSnapshot.portfolio. */

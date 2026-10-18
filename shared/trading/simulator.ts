@@ -12,7 +12,7 @@ import { hash32, mulberry32 } from '../hash';
 import { pickName } from '../names';
 import { intlLocale, tr } from '../i18n';
 import { botStatus, formatPnl, shouldEject } from './rules';
-import type { BotTrading, PortfolioInfo } from './types';
+import type { BotStats, BotTrading, PortfolioInfo, RoomTrading } from './types';
 
 export const ROOM_MAX_BOTS = 6;
 const MAX_BOTS = 54;
@@ -24,6 +24,10 @@ const RECENT_MAX = 30;
 /** Passos atrasados processados de uma vez (aba suspensa): o resto é descartado. */
 const MAX_CATCH_UP = 50;
 const DAILY_LOSS_LIMIT_USD = 5;
+const CAPITAL_USD = 1000;
+/** Preço inicial do BTC simulado e o passo máximo por passo de mercado (±0,3%). */
+const BTC_START_USD = 60_000;
+const BTC_STEP = 0.003;
 
 /** Ordem fixa das salas: stablecoins primeiro, depois os majors. */
 const PAIRS = ['USDT/USDC', 'USDC/DAI', 'FDUSD/USDT', 'PYUSD/USDC', 'USDT/DAI', 'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BTC/USDC'] as const;
@@ -45,8 +49,16 @@ export interface TradingSimOptions {
 interface SimBot {
   info: AgentInfo;
   trading: BotTrading;
+  stats: BotStats;
+  /** PL na abertura da posição atual (vitória = fechar acima dele). */
+  entryPnl: number;
   removeAt?: number;
 }
+
+const pushCapped = <T>(list: T[], item: T): void => {
+  list.push(item);
+  if (list.length > SERIES_MAX) list.splice(0, list.length - SERIES_MAX);
+};
 
 export class TradingSimulator {
   private rng: () => number;
@@ -64,9 +76,16 @@ export class TradingSimulator {
   private rev = 0;
   private dirty = true;
   private seq = 0;
+  /** Preço do BTC simulado, com sorteio próprio (não mexe na sequência dos robôs). */
+  private btcRng: () => number;
+  private btcUsd = BTC_START_USD;
+  /** PL final dos ejetados que já saíram, por sala, e a série de cada sala. */
+  private roomGone = new Map<string, number>();
+  private roomSeries = new Map<string, RoomTrading['series']>();
 
   constructor(opts: TradingSimOptions = {}, now = Date.now()) {
     this.rng = mulberry32(opts.seed ?? hash32(String(now)));
+    this.btcRng = mulberry32(((opts.seed ?? hash32(String(now))) ^ 0x9e3779b9) >>> 0);
     this.speed = opts.speed && opts.speed > 0 ? opts.speed : 1;
     this.interval = (opts.tickMs ?? DEFAULT_TICK_MS) / this.speed;
     this.startedAt = now;
@@ -77,6 +96,7 @@ export class TradingSimulator {
       const pair = PAIRS[i];
       const id = `sim:room:${pair}`;
       this.rooms.push({ id, name: pair, path: `sim://${pair}`, slot: i, seed: hash32(id), createdAt: now });
+      this.roomSeries.set(id, [{ at: now, pnlUsd: 0 }]);
     }
     for (let j = 0; j < count; j++) {
       const room = this.rooms[Math.floor(j / ROOM_MAX_BOTS)];
@@ -92,7 +112,9 @@ export class TradingSimulator {
         position: r < 0.25 ? 'long' : r < 0.5 ? 'short' : 'flat',
         pnlUsd: 0,
         dailyLossLimitUsd: DAILY_LOSS_LIMIT_USD,
+        capitalUsd: CAPITAL_USD,
       };
+      const stats: BotStats = { trades: 0, wins: 0, peakPnlUsd: 0, maxDrawdownUsd: 0, series: [{ at: now, pnlUsd: 0 }], btcStartUsd: BTC_START_USD, btcNowUsd: BTC_START_USD };
       const info: AgentInfo = {
         id,
         kind: 'main',
@@ -113,7 +135,7 @@ export class TradingSimulator {
         seed: hash32(id),
         trading,
       };
-      this.bots.set(id, { info, trading });
+      this.bots.set(id, { info, trading, stats, entryPnl: 0 });
     }
     this.series.push({ at: now, pnlUsd: 0 });
   }
@@ -137,6 +159,7 @@ export class TradingSimulator {
     for (const [id, b] of this.bots) {
       if (b.removeAt !== undefined && now >= b.removeAt) {
         this.gonePnl += b.trading.pnlUsd;
+        this.roomGone.set(b.info.roomId, (this.roomGone.get(b.info.roomId) ?? 0) + b.trading.pnlUsd);
         this.bots.delete(id);
         this.dirty = true;
       }
@@ -151,7 +174,8 @@ export class TradingSimulator {
 
   snapshot(now = Date.now()): OfficeSnapshot {
     const agents = [...this.bots.values()].map((b) => {
-      const info: AgentInfo = { ...b.info, recent: b.info.recent.slice(), tasks: [], stats: { ...b.info.stats }, trading: { ...b.trading } };
+      const stats: BotStats = { ...b.stats, series: b.stats.series.map((p) => ({ ...p })) };
+      const info: AgentInfo = { ...b.info, recent: b.info.recent.slice(), tasks: [], stats: { ...b.info.stats }, trading: { ...b.trading, stats } };
       if (b.info.activity) info.activity = { ...b.info.activity };
       return info;
     });
@@ -166,7 +190,7 @@ export class TradingSimulator {
     return {
       rev: this.rev,
       serverTime: now,
-      rooms: this.rooms.map((r) => ({ ...r })),
+      rooms: this.rooms.map((r) => ({ ...r, trading: { pnlUsd: this.roomPnl(r.id), series: (this.roomSeries.get(r.id) ?? []).map((p) => ({ ...p })) } })),
       agents,
       accounts: [],
       portfolio,
@@ -176,9 +200,11 @@ export class TradingSimulator {
 
   /** Um passo de mercado para todos os robôs ativos. */
   private step(at: number): void {
+    this.btcUsd = Math.round(this.btcUsd * (1 + (this.btcRng() * 2 - 1) * BTC_STEP) * 100) / 100;
     for (const b of this.bots.values()) {
       const t = b.trading;
       if (t.ejectedAt !== undefined) continue;
+      const wasOpen = t.position !== 'flat';
       if (t.position !== 'flat') {
         const size = STABLE.has(t.pair) ? 0.05 : 0.6;
         t.pnlUsd = Math.round((t.pnlUsd + (this.rng() * 2 - 1) * size) * 100) / 100;
@@ -197,12 +223,19 @@ export class TradingSimulator {
         const side = t.position === 'long' ? 'buy' : 'sell';
         this.emit(b, at, 'other', side === 'buy' ? '📈' : '📉', this.orderText(side, t));
       }
+      if (wasOpen && (t.position === 'flat' || t.ejectedAt !== undefined)) {
+        b.stats.trades++;
+        if (t.pnlUsd > b.entryPnl) b.stats.wins++;
+      }
+      if (!wasOpen && t.position !== 'flat') b.entryPnl = t.pnlUsd;
+      this.updateStats(b, at);
       const status = botStatus(t);
       if (status !== b.info.status) {
         b.info.status = status;
         b.info.statusSince = at;
       }
     }
+    for (const r of this.rooms) pushCapped(this.roomSeries.get(r.id)!, { at, pnlUsd: Math.round(this.roomPnl(r.id) * 100) / 100 });
     this.series.push({ at, pnlUsd: Math.round(this.totalPnl() * 100) / 100 });
     if (this.series.length > SERIES_MAX) this.series.splice(0, this.series.length - SERIES_MAX);
     this.dirty = true;
@@ -221,6 +254,21 @@ export class TradingSimulator {
     b.info.lastEventAt = at;
     const room = this.rooms.find((r) => r.id === b.info.roomId);
     this.pendingFeed.push({ id: activity.id, agentId: b.info.id, roomId: b.info.roomId, agentName: b.info.name, roomName: room?.name ?? '', activity });
+  }
+
+  private updateStats(b: SimBot, at: number): void {
+    const s = b.stats;
+    const pnl = b.trading.pnlUsd;
+    s.peakPnlUsd = Math.max(s.peakPnlUsd, pnl);
+    s.maxDrawdownUsd = Math.max(s.maxDrawdownUsd, Math.round((s.peakPnlUsd - pnl) * 100) / 100);
+    s.btcNowUsd = this.btcUsd;
+    pushCapped(s.series, { at, pnlUsd: pnl });
+  }
+
+  private roomPnl(roomId: string): number {
+    let sum = this.roomGone.get(roomId) ?? 0;
+    for (const b of this.bots.values()) if (b.info.roomId === roomId) sum += b.trading.pnlUsd;
+    return sum;
   }
 
   private totalPnl(): number {

@@ -107,6 +107,49 @@ describe('TradingSimulator', () => {
     for (const t of texts) expect(t).toMatch(/^(COMPRA|VENDA) \S+\/\S+ · \w+ · \$\d+$|^EJETADO · /);
   });
 
+  it('sala soma os robôs, ejetados inclusive', () => {
+    const sim = new TradingSimulator({ seed: 5, bots: 54 }, T0);
+    const last = new Map<string, { room: string; pnl: number }>();
+    let now = T0;
+    for (let i = 0; i < 200; i++) {
+      now += STEP;
+      sim.tick(now);
+      for (const a of sim.snapshot(now).agents) last.set(a.id, { room: a.roomId, pnl: a.trading!.pnlUsd });
+    }
+    const snap = sim.snapshot(now);
+    for (const room of snap.rooms) {
+      const sum = [...last.values()].filter((x) => x.room === room.id).reduce((s, x) => s + x.pnl, 0);
+      expect(Math.abs(room.trading!.pnlUsd - sum)).toBeLessThan(0.01);
+      expect(room.trading!.series.length).toBeGreaterThan(0);
+      expect(room.trading!.series.length).toBeLessThanOrEqual(360);
+    }
+  });
+
+  it('sala vazia continua no snapshot com o PL final', () => {
+    const sim = new TradingSimulator({ seed: 3, bots: 6 }, T0);
+    for (const a of sim.snapshot(T0).agents) sim.setPnl(a.id, -5);
+    const end = run(sim, 50);
+    const snap = sim.snapshot(end);
+    expect(snap.agents).toHaveLength(0);
+    expect(snap.rooms).toHaveLength(1);
+    expect(snap.rooms[0].trading!.pnlUsd).toBeLessThanOrEqual(-30);
+  });
+
+  it('estatísticas de cada robô', () => {
+    const sim = new TradingSimulator({ seed: 4, bots: 18 }, T0);
+    const end = run(sim, 100);
+    for (const a of sim.snapshot(end).agents) {
+      const s = a.trading!.stats!;
+      expect(s.trades).toBeGreaterThanOrEqual(s.wins);
+      expect(s.series.length).toBeLessThanOrEqual(360);
+      expect(s.btcStartUsd).toBeGreaterThan(0);
+      expect(s.btcNowUsd).toBeGreaterThan(0);
+      expect(s.maxDrawdownUsd).toBeGreaterThanOrEqual(0);
+      expect(a.trading!.capitalUsd).toBe(1000);
+    }
+    expect(sim.snapshot(end).agents.some((a) => a.trading!.stats!.trades > 0)).toBe(true);
+  });
+
   it('speed acelera o mercado', () => {
     const sim = new TradingSimulator({ seed: 9, speed: 10 }, T0);
     const r = sim.tick(T0 + 2_000);

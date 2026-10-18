@@ -6,7 +6,7 @@
 
 import type { AppearanceParts } from './appearance';
 import type { WorldMeta } from './world/api';
-import type { BotTrading, PortfolioInfo } from './trading/types';
+import type { BotTrading, PortfolioInfo, RoomTrading } from './trading/types';
 
 export type AgentKind = 'main' | 'sub';
 
@@ -210,6 +210,8 @@ export interface RoomInfo {
   createdAt: number;
   /** Efeito visual temporário na sala (eventos do GitHub detectados nos transcripts; ver shared/github.ts). */
   effect?: RoomEffect;
+  /** Bullroom: PL da sala (soma dos robôs, ejetados inclusive) e a série dele. Ausente = sala comum. */
+  trading?: RoomTrading;
 }
 
 /**
