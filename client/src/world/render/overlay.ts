@@ -53,6 +53,23 @@ const PNL_SMALL_ZOOM = 1.5;
 const PNL_FLASH_MS = 700;
 const PNL_COLORS: Record<PnlTone, string> = { gain: '#4ade80', loss: '#f87171', zero: '#a1a9b8' };
 
+/**
+ * Partes da placa da sala: nome, contagem e PL da sala (compacto, sem "$"). Sem espaço para tudo, o PL fica e a
+ * contagem sai. `fits` diz se as partes cabem. Sala sem PL = igual ao habblaud. Puro (testável).
+ */
+export function roomPillParts(
+  name: string,
+  count: number,
+  pnl: number | undefined,
+  locale: string,
+  fits: (parts: { name: string; count: string; pnl: string }) => boolean,
+): { name: string; count: string; pnl: string; tone: PnlTone } {
+  const parts = { name, count: count > 0 ? String(count) : '', pnl: pnl === undefined ? '' : formatPnl(pnl, locale).replace('$', '') };
+  const tone: PnlTone = pnl === undefined ? 'zero' : pnlTone(pnl);
+  if (parts.pnl && parts.count && !fits(parts)) parts.count = '';
+  return { ...parts, tone };
+}
+
 /** Texto e tom do balão de PL de um robô; null para agentes que não são de trading. Puro (testável). */
 export function pnlBadge(agent: Pick<AgentInfo, 'trading'>, locale: string): { text: string; tone: PnlTone } | null {
   const t = agent.trading;
@@ -495,7 +512,7 @@ export class Overlay {
       const anim = room ? buildAnim(room.phase, room.progress(now)) : null;
       // texto da placa quando ela fica grande o bastante para ler; senão, o nome flutuante
       const rect = this.renderer.signRect(vis);
-      const text = room ? room.info.name : vis.id === 'core:recepcao' ? 'Habblaud' : null;
+      const text = room ? room.info.name : vis.id === 'core:recepcao' ? 'Bullroom' : null;
       const readable = !!rect && rect.h * zoom >= SIGN_MIN_PX;
       if (readable && rect && text && (!anim || anim.sign >= 1)) {
         const ax = this.sx(rect.x);
@@ -514,7 +531,7 @@ export class Overlay {
       if (room) {
         // endereço antigo de uma mudança: o nome já está na sala nova
         if (!room.present || room.ghost || (anim && anim.walls < 0.6)) continue;
-        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn);
+        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd);
       } else if (CORE_NAMES[vis.id]) {
         this.drawCorePill(CORE_NAMES[vis.id], cx, cy, colW - 8);
       }
@@ -585,11 +602,17 @@ export class Overlay {
     }
   }
 
-  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean): void {
+  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number): void {
     const { ctx } = this;
     let dots = accounts.filter((a) => this.sim.accounts.has(a));
-    let countText = count > 0 ? String(count) : '';
-    let cw = countText ? this.measure(LABEL_FONT, countText) + 14 : 0;
+    // Bullroom: PL da sala na placa; sem espaço, ele fica e a contagem sai
+    const chipW = (t: string) => (t ? this.measure(LABEL_FONT, t) + 14 : 0);
+    const parts = roomPillParts(name, count, pnl, intlLocale(), (p) => this.measure(ROOM_FONT, p.name) + 18 + dots.length * 10 + chipW(p.count) + chipW(p.pnl) <= maxW);
+    const pnlText = parts.pnl;
+    const pw = chipW(pnlText);
+    maxW -= pw;
+    let countText = parts.count;
+    let cw = chipW(countText);
     // nome cortado para caber na largura da coluna; com pouco espaço, o nome vale mais que a
     // contagem e as bolinhas; sem espaço nem para 3 letras, pílula compacta (só contagem)
     let text = this.fit(ROOM_FONT, name, Math.min(180, maxW - (18 + dots.length * 10 + cw)));
@@ -602,11 +625,11 @@ export class Overlay {
         cw = 0;
       }
     }
-    const extras = 18 + dots.length * 10 + cw;
+    const extras = 18 + dots.length * 10 + cw + pw;
     // Só vira pílula compacta quando o nome precisou ser cortado (nomes curtos como "app" cabem inteiros).
     const compact = text !== name && text.length < 4;
     const tw = compact ? 0 : this.measure(ROOM_FONT, text);
-    const w = Math.round(compact ? Math.max(12, 10 + cw + dots.length * 10) : tw + extras);
+    const w = Math.round(compact ? Math.max(12, 10 + cw + pw + dots.length * 10) : tw + extras);
     const h = 22;
     const x = Math.round(cx - w / 2);
     const y = Math.round(cy - h - 4);
@@ -643,6 +666,20 @@ export class Overlay {
       ctx.font = LABEL_FONT;
       ctx.fillStyle = '#dfe5f2';
       ctx.fillText(countText, dx + 7, y + h / 2 + 0.5);
+      dx += cw;
+    }
+    if (pnlText) {
+      const color = PNL_COLORS[parts.tone];
+      ctx.fillStyle = 'rgba(8,11,16,0.85)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(dx + 2, y + 3, pw - 4, h - 6, 5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = LABEL_FONT;
+      ctx.fillStyle = color;
+      ctx.fillText(pnlText, dx + 7, y + h / 2 + 0.5);
     }
     ctx.restore();
     this.place(x, y, w, h);

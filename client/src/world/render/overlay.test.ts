@@ -1,7 +1,7 @@
 // Regras puras da camada de texto do mundo (balões e enquadramento).
 import { describe, expect, it } from 'vitest';
 import { overviewFrame } from '../camera';
-import { pnlBadge, rationBubbles, waitBubbleText } from './overlay';
+import { pnlBadge, rationBubbles, roomPillParts, waitBubbleText } from './overlay';
 import type { AgentInfo } from '../../../../shared/types';
 
 describe('balões', () => {
@@ -58,5 +58,19 @@ describe('balão de PL (Bullroom)', () => {
     expect(pnlBadge(agent(t), 'pt-BR')).toEqual({ text: '+$2,58', tone: 'gain' });
     expect(pnlBadge(agent({ ...t, pnlUsd: -1.31 }), 'en')).toEqual({ text: '-$1.31', tone: 'loss' });
     expect(pnlBadge(agent({ ...t, pnlUsd: 0 }), 'pt-BR')).toEqual({ text: '+$0,00', tone: 'zero' });
+  });
+});
+
+describe('placa da sala com PL (Bullroom)', () => {
+  const all = () => true;
+  it('com espaço: nome, contagem e PL (compacto, sem $)', () => {
+    expect(roomPillParts('USDT/USDC', 6, 12.4, 'pt-BR', all)).toEqual({ name: 'USDT/USDC', count: '6', pnl: '+12,40', tone: 'gain' });
+  });
+  it('sem espaço para tudo: o PL fica, a contagem sai', () => {
+    const noCount = (p: { count: string }) => p.count === '';
+    expect(roomPillParts('BTC/USDT', 6, -3.5, 'pt-BR', noCount)).toEqual({ name: 'BTC/USDT', count: '', pnl: '-3,50', tone: 'loss' });
+  });
+  it('sala comum (sem PL): igual ao habblaud', () => {
+    expect(roomPillParts('loja', 2, undefined, 'pt-BR', all)).toEqual({ name: 'loja', count: '2', pnl: '', tone: 'zero' });
   });
 });
