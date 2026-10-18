@@ -17,6 +17,10 @@ do meio (0.**3**.0).
 - **PL sobre a cabeça** de cada robô (verde, vermelho ou cinza), que só pisca quando o valor muda.
 - **Carteira na barra do topo:** PL total, robôs, em operação, mini-gráfico e o selo SIMULATED.
 - **Feed de operações:** COMPRA/VENDA, par, corretora e valor; EJETADO com o PL final.
+- **PL da sala na placa** (ejetados inclusive), legível de longe com 54 robôs; a contagem cede lugar ao PL.
+- **Telão na lousa** de cada sala de trading: PL da sala em pixels e a linha dele.
+- **Cartão do robô** no painel lateral: abas 5m/1h/24h, acerto, trades, drawdown máx., limite de perda usado e
+  "vs segurar BTC". Para robôs, somem terminal, mensagem, tarefas, subagentes, tokens e vida social.
 
 ### Mudado
 

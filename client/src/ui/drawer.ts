@@ -1,5 +1,6 @@
 // Gaveta de detalhes (direita): agente ou sala selecionados. Agente do Codex: selo "Codex", textos dele (onde
 // responder, o terminal, a aprovação no lugar do modo de permissão, sem custo) e a dica dos hooks do Codex.
+import { BotCard } from './bot-card';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
 import { roomTheme } from '../art';
 import { createAvatarPlaceholder, updateAvatar } from './avatar';
@@ -258,6 +259,9 @@ class AgentView {
   /** Quantos itens da linha do tempo aparecem agora. */
   private timelineShown = TIMELINE_STEP;
   private stats: KvList<StatKey>;
+  /** Bullroom: cartão do robô (só para agentes com `trading`) e a seção de estatísticas do Claude Code. */
+  private botCard: BotCard;
+  private statsSecEl: HTMLElement;
   private social: SocialSection;
   readonly character: CharacterEditor;
   private sessionValue: HTMLElement;
@@ -401,6 +405,8 @@ class AgentView {
       ['bg', tr('Execução')],
     ]);
     const statsSec = section(tr('Estatísticas'), this.stats.el);
+    this.statsSecEl = statsSec.el;
+    this.botCard = new BotCard();
     this.codexHint = h('p', { class: 'ui-codex-hint', hidden: true }, ...richText(CODEX_LIVE_HINT));
 
     this.el = h(
@@ -411,6 +417,7 @@ class AgentView {
       this.title,
       this.gone,
       statusRow,
+      this.botCard.el,
       this.termBtn,
       this.termWhy,
       this.alert,
@@ -658,6 +665,11 @@ class AgentView {
     setText(this.timelineSec.extra, this.history.length ? String(this.history.length) : '');
 
     this.renderStats(a, now);
+
+    // Bullroom: robô de trading mostra o cartão e esconde o que é do Claude Code (terminal, mensagem, tarefas,
+    // subagentes, tokens) e a vida social (moedinhas e apostas não combinam com trading); agente comum fica igual.
+    this.botCard.render(a, now);
+    if (a.trading) for (const el of [this.termBtn, this.termWhy, this.msgSec.el, this.social.el, this.tasksSec.el, this.teamSec.el, this.statsSecEl]) setHidden(el, true);
 
     // Codex: como ter o ao vivo e as aprovações por aqui (o servidor ainda não diz se os hooks dele estão ligados).
     setHidden(this.codexHint, !codex || a.kind !== 'main' || !live || this.ctx.store.replaying);

@@ -3302,4 +3302,18 @@ export const FR: Readonly<Record<string, string>> = {
   "{0} · {1} · {2} em operação": "{0} · {1} · {2} en position",
   "Dados simulados: nenhuma corretora, chave ou dinheiro real": "Données simulées : aucune plateforme, clé ni argent réel",
   "Carteira: {0}. Ejetados hoje: {1}.": "Portefeuille : {0}. Éjectés aujourd'hui : {1}.",
+
+  // client/src/ui/bot-card.ts (Bullroom)
+  "Período": "Période",
+  "Acerto": "Réussite",
+  "Trades": "Trades",
+  "Drawdown máx.": "Drawdown max.",
+  "Limite de perda usado": "Limite de perte utilisée",
+  "vs segurar BTC": "vs garder du BTC",
+  "Robô": "Robot",
+  "Dados simulados. Não é recomendação de investimento.": "Données simulées. Pas un conseil en investissement.",
+  "comprado": "acheteur",
+  "vendido": "vendeur",
+  "zerado": "sans position",
+  "{0} em {1}": "{0} en {1}",
 };
