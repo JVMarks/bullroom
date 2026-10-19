@@ -34,6 +34,13 @@ Static demo for the website: `npm run build:demo` (builds `dist/demo` with relat
 - **Calm by default.** The room only moves when something happens.
 - **Honest numbers.** Simulated is always labeled as simulated; losers are shown too.
 
+## Support
+
+Free and open source, funded only by donations (voluntary gifts: they buy no product, service or advice).
+
+- **Lightning:** `sickfog79@walletofsatoshi.com`
+- **Bitcoin on-chain:** `bc1qwk9qmeqm3fwc5q29yu945z0tuvn2yqwvf3wt9cayt5s886lcuhssejj98j`
+
 ## Credits
 
 Bullroom is a fork of **[habblaud](https://github.com/marmottajr/habblaud)** by Márcio Junior (MIT), a pixel-art office
