@@ -7,7 +7,7 @@ daily loss limit.
 Bullroom is the visual window of **[OpenSpread](https://github.com/JVMarks/OpenSpread)**, an open-source, local-first
 hub for crypto and stablecoin arbitrage trading. *A bitcoin100treta project.*
 
-**Website and live demo:** https://jvmarks.github.io/OpenSpread/ (the demo runs simulated bots in your browser).
+**Website and live demo:** https://bullroom.vercel.app (the demo runs simulated bots in your browser).
 
 > **Two modes.** `?mock=trading`: simulated bots from a seeded simulator in your browser. `?source=core`: live,
 > read-only public prices from the [OpenSpread core](https://github.com/JVMarks/OpenSpread) running on your computer.
@@ -25,7 +25,7 @@ npm run dev:client
 Then open `http://localhost:5173/?mock=trading`. Options: `&bots=54` (up to 54), `&speed=10`, `&seed=7`.
 
 Live data: run the OpenSpread core (`npm start` in `OpenSpread/core`) and open `http://localhost:5173/?source=core`.
-Static demo for the website: `npm run build:demo` (builds `dist/demo` for the `/OpenSpread/demo/` path).
+Static demo for the website: `npm run build:demo` (builds `dist/demo` with relative paths; works under any path).
 
 ## Principles
 
