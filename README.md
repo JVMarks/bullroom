@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/img/mascot-trader.webp" alt="Bullroom mascot: a golden bull robot trading at a monitor" width="160"></p>
+
 # Bullroom
 
 **Your trading bots as an animated pixel-art office.** Each bot is a trader: seated while it holds a position, walking

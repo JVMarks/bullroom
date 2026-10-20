@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Mascote do Bullroom.** O robô-touro dourado vira o ícone da aba, do app na Tela de Início e a prévia ao
+  compartilhar o link. (Os ícones em `client/public/assets/brand/` agora são feitos à mão: rodar
+  `scripts/assets/postprocess.py` de novo os sobrescreve com a marca antiga.)
 - **Dados reais, só leitura (`?source=core`).** Com o núcleo do OpenSpread rodando (`npm start` em `core/`), cada
   par de stablecoins vira uma sala e cada corretora um personagem: o balão mostra a distância dela para o preço médio
   (em pontos-base), a placa e o telão o melhor spread líquido (%), e a barra do topo o melhor spread do momento com
