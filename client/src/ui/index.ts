@@ -159,6 +159,10 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     },
     openHelp: (section) => help.open(section),
     toggleSettings: () => settings.toggle(topbar.settingsBtn),
+    toggleMarkets(open) {
+      drawer.toggleMarkets(open);
+      applyLayout();
+    },
     toggleWorld: () => worldDialog.toggle(topbar.worldBtn),
     openAbout: () => settings.showAbout(topbar.settingsBtn),
     toggleTimelapse() {
@@ -294,7 +298,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   area = new FreeArea(world, { root, topbar: topbar.el, sidebar: sidebar.el, drawer: drawer.el, feed: feed.el }, () => ({
     sidebar: panels.sidebar,
     feed: panels.feed,
-    drawer: selection !== null && !drawer.floating,
+    drawer: (selection !== null || drawer.marketsOpen) && !drawer.floating,
     narrow: ctx.isNarrow(),
   }));
   drawer.onLayoutChange = () => applyLayout();
@@ -336,7 +340,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   function applyLayout(opts: { refocus?: boolean } = {}): void {
     root.classList.toggle('has-sidebar', panels.sidebar);
     root.classList.toggle('has-feed', panels.feed);
-    root.classList.toggle('has-drawer', selection !== null && !drawer.floating);
+    root.classList.toggle('has-drawer', (selection !== null || drawer.marketsOpen) && !drawer.floating);
     root.classList.toggle('is-narrow', ctx.isNarrow());
     area.sync(opts);
   }
@@ -407,6 +411,9 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
         e.preventDefault();
       } else if (selection) {
         ctx.select(null);
+        e.preventDefault();
+      } else if (drawer.marketsOpen) {
+        ctx.toggleMarkets(false);
         e.preventDefault();
       }
       return;

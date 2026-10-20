@@ -6,6 +6,9 @@ import type { CoreState } from './types';
 
 const SERIES_MAX = 360;
 
+/** Endereço do núcleo local do OpenSpread (stream em /v1/stream; configuração em /v1/config e /v1/check). */
+export const CORE_BASE = 'http://127.0.0.1:4848';
+
 /** Nome exibido de cada corretora (id da CCXT → nome). */
 export const EXCHANGE_NAMES: Readonly<Record<string, string>> = {
   binance: 'Binance',
@@ -13,7 +16,29 @@ export const EXCHANGE_NAMES: Readonly<Record<string, string>> = {
   bybit: 'Bybit',
   kraken: 'Kraken',
   coinbaseexchange: 'Coinbase',
+  kucoin: 'KuCoin',
+  gate: 'Gate',
+  mexc: 'MEXC',
+  bitget: 'Bitget',
+  htx: 'HTX',
+  bitfinex: 'Bitfinex',
+  bitstamp: 'Bitstamp',
+  gemini: 'Gemini',
+  cryptocom: 'Crypto.com',
+  bingx: 'BingX',
+  bitmart: 'BitMart',
+  bitvavo: 'Bitvavo',
+  upbit: 'Upbit',
+  binanceus: 'Binance US',
+  mercado: 'Mercado Bitcoin',
+  foxbit: 'Foxbit',
+  bitso: 'Bitso',
 };
+
+/** Nome exibido de uma corretora; sem nome na lista, o id com a primeira letra maiúscula. */
+export function exchangeName(id: string): string {
+  return EXCHANGE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+}
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
@@ -42,7 +67,7 @@ export class CoreOffice {
       const mids = p.quotes.map((q) => (q.bid + q.ask) / 2);
       const avg = mids.reduce((s, m) => s + m, 0) / (mids.length || 1);
       p.quotes.forEach((q, i) => {
-        const name = EXCHANGE_NAMES[q.exchange] ?? q.exchange;
+        const name = exchangeName(q.exchange);
         const agentId = `core:${q.exchange}:${p.pair}`;
         agents.push({
           id: agentId,

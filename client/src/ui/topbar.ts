@@ -74,7 +74,7 @@ export class TopBar implements UiComponent {
 
     const counterWrap = h('div', { class: 'ui-counters', role: 'group', attrs: { 'aria-label': tr('Resumo do escritório') } });
     this.counterWrap = counterWrap;
-    this.portfolio = new PortfolioBar();
+    this.portfolio = new PortfolioBar(() => ctx.toggleMarkets());
     for (const c of COUNTERS) {
       const value = h('span', { class: 'ui-counter__value', text: '0' });
       const label = h('span', { class: 'ui-counter__label', text: c.plural });

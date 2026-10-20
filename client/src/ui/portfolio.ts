@@ -36,14 +36,17 @@ export class PortfolioBar {
   private rest: HTMLElement;
   private canvas: HTMLCanvasElement;
   private badge: HTMLElement;
+  private readonly clickable: boolean;
   /** Último estado desenhado no mini-gráfico (princípio da calma: só redesenha quando muda). */
   private drawn = '';
 
-  constructor() {
+  /** `onBadge`: clique no selo SIMULATED / LIVE abre o painel "Mercados". */
+  constructor(onBadge?: () => void) {
+    this.clickable = !!onBadge;
     this.total = h('span', { class: 'ui-portfolio__total' });
     this.rest = h('span', { class: 'ui-portfolio__rest' });
     this.canvas = h('canvas', { class: 'ui-portfolio__spark', attrs: { width: String(SPARK_W * 2), height: String(SPARK_H * 2), 'aria-hidden': 'true' } });
-    this.badge = h('span', { class: 'ui-portfolio__sim' });
+    this.badge = onBadge ? h('button', { class: 'ui-portfolio__sim', type: 'button', on: { click: onBadge } }) : h('span', { class: 'ui-portfolio__sim' });
     this.el = h('div', { class: 'ui-portfolio', role: 'status', attrs: { 'aria-live': 'polite' }, hidden: true }, this.total, this.rest, this.canvas, this.badge);
   }
 
@@ -57,7 +60,8 @@ export class PortfolioBar {
     setText(this.rest, rest.join(' · '));
     setText(this.badge, p.simulated ? 'SIMULATED' : 'LIVE · READ-ONLY');
     this.badge.classList.toggle('is-live', !p.simulated);
-    setTitle(this.badge, p.simulated ? tr('Dados simulados: nenhuma corretora, chave ou dinheiro real') : tr('Dados públicos ao vivo, só leitura: nenhuma chave, nenhuma ordem'));
+    const about = p.simulated ? tr('Dados simulados: nenhuma corretora, chave ou dinheiro real') : tr('Dados públicos ao vivo, só leitura: nenhuma chave, nenhuma ordem');
+    setTitle(this.badge, this.clickable ? tr('{0}. Clique para ver corretoras e pares.', [about]) : about);
     setTitle(
       this.el,
       p.unit === 'pct'

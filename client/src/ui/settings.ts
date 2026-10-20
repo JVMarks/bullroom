@@ -92,6 +92,8 @@ export class SettingsPopover implements UiComponent {
   private language: ReturnType<typeof segmented<LanguageChoice>>;
   private soundGroup: SoundSettingsGroup;
   private demoGroup: HTMLElement;
+  /** Bullroom (salas de trading): atalho para o painel "Mercados". */
+  private marketsGroup: HTMLElement;
   /** Só na página do celular (porta remota com login): sair deste aparelho. */
   private remoteGroup: HTMLElement;
   private logoutBtn: HTMLButtonElement;
@@ -170,6 +172,33 @@ export class SettingsPopover implements UiComponent {
       sw('demo', tr('Modo demonstração'), tr('Coloca agentes fictícios no escritório, junto com os reais.'), () => void this.toggleDemo()),
     );
 
+    this.marketsGroup = h(
+      'div',
+      { class: 'ui-set-group', hidden: true },
+      h('h3', { text: tr('Mercados') }),
+      h(
+        'div',
+        { class: 'ui-set' },
+        h(
+          'div',
+          { class: 'ui-set__text' },
+          h('span', { class: 'ui-set__label', text: tr('Corretoras e pares') }),
+          h('span', { class: 'ui-set__hint', text: tr('Cada par vira uma sala; cada corretora, um personagem.') }),
+        ),
+        h('button', {
+          class: 'ui-btn',
+          type: 'button',
+          text: tr('Abrir'),
+          on: {
+            click: () => {
+              this.hide();
+              ctx.toggleMarkets(true);
+            },
+          },
+        }),
+      ),
+    );
+
     this.logoutBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Sair'), on: { click: () => void this.logout() } }) as HTMLButtonElement;
     this.remoteGroup = h(
       'div',
@@ -196,6 +225,7 @@ export class SettingsPopover implements UiComponent {
       'div',
       { class: 'ui-popover ui-settings', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Configurações'), id: 'ui-settings', popover: 'auto' } },
       h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Configurações') }), close),
+      this.marketsGroup,
       h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Aparência') }), this.theme.row),
       h(
         'div',
@@ -288,6 +318,7 @@ export class SettingsPopover implements UiComponent {
     this.language.set(savedLanguage());
     this.soundGroup.render();
     setHidden(this.demoGroup, this.ctx.store.mock || access().remote);
+    setHidden(this.marketsGroup, !this.ctx.store.snapshot?.portfolio);
     setHidden(this.remoteGroup, !access().remote);
     this.about.render();
 

@@ -12,6 +12,12 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Painel Mercados (`?source=core`).** Escolha as corretoras (cada uma vira um personagem) e os pares (cada um vira
+  uma sala) sem editar arquivo: pelo selo LIVE da barra do topo ou em Configurações › Mercados. "Conferir" mostra
+  quem lista cada par, com a taxa taker pública ao passar o mouse; "Salvar e aplicar" grava a configuração do núcleo
+  do OpenSpread, que troca as salas sem reiniciar. Pares voláteis (BTC, ETH) avisam que a transferência entre
+  corretoras não é descontada. Na demonstração simulada, o painel explica como ligar o núcleo. Corretoras novas
+  ganham nome legível (KuCoin, Gate, MEXC…).
 - **Mascote do Bullroom.** O robô-touro dourado vira o ícone da aba, do app na Tela de Início e a prévia ao
   compartilhar o link. (Os ícones em `client/public/assets/brand/` agora são feitos à mão: rodar
   `scripts/assets/postprocess.py` de novo os sobrescreve com a marca antiga.)

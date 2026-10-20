@@ -8,11 +8,11 @@ import type { AppearanceParts } from '../../../shared/appearance';
 import type { Activity, AgentDetail, AgentInfo, FeedItem, Notice, OfficeSnapshot, OutboxMessage, PermissionDecision, PermissionRequestInfo, RoomInfo } from '../../../shared/types';
 import { DemoSimulator } from '../../../shared/demo/simulator';
 import { TradingSimulator, type TradingSimOptions } from '../../../shared/trading/simulator';
-import { CoreOffice } from '../../../shared/core/to-office';
+import { CORE_BASE, CoreOffice } from '../../../shared/core/to-office';
 import type { CoreState } from '../../../shared/core/types';
 
 /** Stream do núcleo local do OpenSpread (core/, `npm start`). Só 127.0.0.1. */
-export const CORE_STREAM_URL = 'http://127.0.0.1:4848/v1/stream';
+export const CORE_STREAM_URL = `${CORE_BASE}/v1/stream`;
 const CORE_RETRY_MS = 5_000;
 import { tr } from '../../../shared/i18n';
 

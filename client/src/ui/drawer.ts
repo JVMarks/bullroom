@@ -2,6 +2,7 @@
 // responder, o terminal, a aprovação no lugar do modo de permissão, sem custo) e a dica dos hooks do Codex.
 import { tradingActivityFallback, tradingHeading, tradingStatusLabel } from './trading-labels';
 import { BotCard } from './bot-card';
+import { MarketsView } from './markets';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
 import { roomTheme } from '../art';
 import { createAvatarPlaceholder, updateAvatar } from './avatar';
@@ -974,7 +975,10 @@ export class Drawer implements UiComponent {
   private body: HTMLElement;
   private agentView: AgentView;
   private roomView: RoomView;
-  private mode: 'agent' | 'room' | null = null;
+  private marketsView: MarketsView;
+  private mode: 'agent' | 'room' | 'markets' | null = null;
+  /** Painel "Mercados" pedido (Bullroom). Uma seleção no escritório tem prioridade e fecha o painel. */
+  private marketsWanted = false;
   private heading: HTMLElement;
   private movable: Movable;
   /** Avisado quando a gaveta é solta ou volta ao lugar (a área livre do escritório muda). */
@@ -987,8 +991,12 @@ export class Drawer implements UiComponent {
   ) {
     this.agentView = new AgentView(ctx, terminal, pty);
     this.roomView = new RoomView(ctx, pty);
+    this.marketsView = new MarketsView(ctx);
     this.heading = h('span', { class: 'ui-drawer__kind' });
-    const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => ctx.select(null));
+    const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => {
+      if (this.mode === 'markets') this.toggleMarkets(false);
+      else ctx.select(null);
+    });
     this.body = h('div', { class: 'ui-drawer__body' });
     const bar = h('div', { class: 'ui-drawer__bar' }, this.heading, close);
     this.el = h(
@@ -1006,6 +1014,22 @@ export class Drawer implements UiComponent {
     return this.mode !== null;
   }
 
+  /** Painel "Mercados" aberto (ou pedido, até o próximo quadro). */
+  get marketsOpen(): boolean {
+    return this.marketsWanted;
+  }
+
+  /** Abre/fecha o painel "Mercados"; abrir tira a seleção do escritório (a gaveta é uma só). */
+  toggleMarkets(open = !this.marketsWanted): void {
+    if (open === this.marketsWanted) return;
+    this.marketsWanted = open;
+    if (open) {
+      if (this.ctx.selection()) this.ctx.select(null);
+      this.marketsView.open();
+    }
+    this.ctx.invalidate();
+  }
+
   /** Solta do lugar (arrastada pela barra). */
   get floating(): boolean {
     return this.movable.floating;
@@ -1017,12 +1041,13 @@ export class Drawer implements UiComponent {
 
   render(): void {
     const sel = this.ctx.selection();
-    const mode = sel?.type ?? null;
+    if (sel && this.marketsWanted) this.marketsWanted = false;
+    const mode = sel?.type ?? (this.marketsWanted ? 'markets' : null);
     if (mode !== this.mode) {
       // Gaveta fechada ou fora do agente: o editor fecha, e ao reabrir começa do estado atual do agente.
       if (this.mode === 'agent') this.agentView.character.close();
       this.mode = mode;
-      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : []));
+      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : []));
       this.body.scrollTop = 0;
       this.el.classList.toggle('is-open', mode !== null);
       setAttr(this.el, 'aria-hidden', mode ? 'false' : 'true');
@@ -1039,6 +1064,9 @@ export class Drawer implements UiComponent {
       this.roomView.open(sel.id);
       setText(this.heading, tr('Sala'));
       this.roomView.render();
+    } else if (mode === 'markets') {
+      setText(this.heading, tr('Mercados'));
+      this.marketsView.render();
     }
   }
 }
