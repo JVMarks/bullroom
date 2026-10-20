@@ -41,6 +41,12 @@ Free and open source, funded only by donations (voluntary gifts: they buy no pro
 - **Lightning:** `sickfog79@walletofsatoshi.com`
 - **Bitcoin on-chain:** `bc1qwk9qmeqm3fwc5q29yu945z0tuvn2yqwvf3wt9cayt5s886lcuhssejj98j`
 
+## Follow
+
+Updates, videos and lives on **bitcoin100treta**: [YouTube](https://www.youtube.com/channel/UCHQam-riGkJR4N5nGc8UZYQ) ·
+[Instagram](https://www.instagram.com/bitcoin100treta) · [TikTok](https://www.tiktok.com/@bitcoin100treta2.0) ·
+[X](https://x.com/bitcoin100treta) · [Twitch](https://www.twitch.tv/bitcoin100treta) · [all links](https://linktr.ee/bitcoin100treta)
+
 ## Credits
 
 Bullroom is a fork of **[habblaud](https://github.com/marmottajr/habblaud)** by Márcio Junior (MIT), a pixel-art office
