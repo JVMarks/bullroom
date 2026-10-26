@@ -1,7 +1,8 @@
 // Núcleo do OpenSpread → escritório do Bullroom (conceito A: cada corretora é um personagem na sala do par).
 // Puro, com uma memória pequena (a série de cada sala). Código sem Node e sem DOM.
-import type { AgentInfo, OfficeSnapshot, RoomInfo } from '../types';
+import type { AgentInfo, Notice, OfficeSnapshot, RoomInfo } from '../types';
 import { hash32 } from '../hash';
+import { intlLocale, tr } from '../i18n';
 import type { CoreState } from './types';
 
 const SERIES_MAX = 360;
@@ -47,6 +48,10 @@ export class CoreOffice {
   private total: Array<{ at: number; pnlUsd: number }> = [];
   /** Rev próprio, sempre crescente: o do núcleo volta a 1 quando ele reinicia, e o store descartaria o snapshot. */
   private rev = 0;
+
+  /** Alertas já vistos (por id) e se o primeiro estado já chegou. */
+  private seenAlerts = new Set<string>();
+  private alertsPrimed = false;
 
   constructor(private startedAt = Date.now()) {}
 
@@ -105,4 +110,28 @@ export class CoreOffice {
       meta: { demo: false, sources: [], startedAt: this.startedAt, version: 'core' },
     };
   }
+
+  /**
+   * Alertas de spread que tocaram desde a última olhada, como avisos da sala do par. Os que já existiam no primeiro
+   * estado recebido não viram aviso (tocaram antes de o Bullroom abrir).
+   */
+  alertNotices(state: CoreState): Notice[] {
+    const events = state.alerts ?? [];
+    const fresh = events.filter((e) => !this.seenAlerts.has(e.id));
+    for (const e of fresh) this.seenAlerts.add(e.id);
+    if (this.seenAlerts.size > 200) this.seenAlerts = new Set(events.map((e) => e.id));
+    if (!this.alertsPrimed) {
+      this.alertsPrimed = true;
+      return [];
+    }
+    const pct = (n: number) => `${new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(n)}%`;
+    return fresh.map((e) => ({
+      id: `core-alert-${e.id}`,
+      level: 'info',
+      text: tr('{0}: spread líquido chegou a {1} (alerta em {2}), de {3} para {4}.', [e.pair, pct(e.netPct), pct(e.abovePct), exchangeName(e.buyOn), exchangeName(e.sellOn)]),
+      roomId: `core:room:${e.pair}`,
+      at: e.at,
+    }));
+  }
+
 }

@@ -9,7 +9,7 @@ import { coreConfigApi, type CoreConfigApi, type CoreFailure } from '../net/core
 import type { UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { draftProblems, formatFee, normalizePair, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS } from './markets-model';
+import { draftProblems, formatFee, normalizePair, parseAlertPct, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS } from './markets-model';
 
 type Phase = 'demo' | 'loading' | 'offline' | 'ready';
 type Tone = 'ok' | 'warn' | 'error';
@@ -23,6 +23,8 @@ export class MarketsView {
   private busy: 'check' | 'save' | null = null;
   private note: { tone: Tone; lines: string[] } | null = null;
   private searching = false;
+  /** Par com o campo de novo alerta aberto. */
+  private alertFor: string | null = null;
 
   private status: HTMLElement;
   private retry: HTMLButtonElement;
@@ -329,9 +331,85 @@ export class MarketsView {
           }
         }
         if (s.volatile) lines.push(h('p', { class: 'ui-mk__warn', text: tr('Volátil: a transferência entre corretoras não é descontada.') }));
-        const remove = iconButton(ICONS.close, tr('Tirar a sala {0}', [pair]), () => this.edit((x) => (x.pairs = x.pairs.filter((p) => p !== pair))), 'ui-icon-btn--sm');
-        return h('div', { class: `ui-mk__room${s.checked && !s.opens ? ' is-short' : ''}` }, h('div', { class: 'ui-mk__room-head' }, h('b', { text: pair }), remove), ...lines);
+        const remove = iconButton(
+          ICONS.close,
+          tr('Tirar a sala {0}', [pair]),
+          () =>
+            this.edit((x) => {
+              x.pairs = x.pairs.filter((p) => p !== pair);
+              x.alerts = x.alerts.filter((a) => a.pair !== pair);
+            }),
+          'ui-icon-btn--sm',
+        );
+        return h('div', { class: `ui-mk__room${s.checked && !s.opens ? ' is-short' : ''}` }, h('div', { class: 'ui-mk__room-head' }, h('b', { text: pair }), remove), ...lines, this.alertRow(pair, locale));
       }),
+    );
+  }
+
+  /** Linha do alerta da sala: o alerta atual (com ✕), o botão "+ alerta" ou o campo do nível. */
+  private alertRow(pair: string, locale: string): HTMLElement {
+    const d = this.draft!;
+    const current = d.alerts.find((a) => a.pair === pair);
+    const pct = (n: number) => `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(n)}%`;
+    if (current) {
+      return h(
+        'div',
+        { class: 'ui-mk__alert' },
+        h('span', { text: tr('Alerta: spread líquido ≥ {0}', [pct(current.abovePct)]), title: tr('Toca uma vez ao chegar ao nível e volta a valer depois que o spread recua.') }),
+        h('button', {
+          class: 'ui-mk__x',
+          type: 'button',
+          text: '✕',
+          attrs: { 'aria-label': tr('Tirar o alerta de {0}', [pair]) },
+          on: { click: () => this.edit((x) => (x.alerts = x.alerts.filter((a) => a.pair !== pair))) },
+        }),
+      );
+    }
+    if (this.alertFor !== pair) {
+      return h('button', {
+        class: 'ui-mk__suggestion ui-mk__alert-add',
+        type: 'button',
+        text: tr('+ alerta de spread'),
+        on: {
+          click: () => {
+            this.alertFor = pair;
+            this.paint();
+            this.rooms.querySelector<HTMLInputElement>('.ui-mk__alert-form input')?.focus();
+          },
+        },
+      });
+    }
+    const limits = this.info!.limits;
+    const input = h('input', {
+      class: 'ui-mk__input ui-mk__pct',
+      type: 'text',
+      attrs: { inputmode: 'decimal', placeholder: '0,05', 'aria-label': tr('Nível do alerta em % para {0}', [pair]), autocomplete: 'off' },
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.alertFor = null;
+      this.paint();
+    });
+    const submit = (e: Event) => {
+      e.preventDefault();
+      const n = parseAlertPct(input.value, limits.minAlertPct ?? -1, limits.maxAlertPct ?? 10);
+      if (n === null) {
+        this.note = { tone: 'error', lines: [tr('Nível do alerta: um número em % entre {0} e {1}.', [limits.minAlertPct ?? -1, limits.maxAlertPct ?? 10])] };
+        this.paint();
+        return;
+      }
+      this.alertFor = null;
+      this.edit((x) => x.alerts.push({ pair, abovePct: n }));
+    };
+    return h(
+      'form',
+      { class: 'ui-mk__alert-form', on: { submit } },
+      h('span', { class: 'ui-mk__hint', text: tr('Avisar quando o spread líquido chegar a') }),
+      input,
+      h('span', { class: 'ui-mk__hint', text: '%' }),
+      h('button', { class: 'ui-btn ui-btn--sm', type: 'submit', text: tr('OK') }),
     );
   }
 
@@ -345,4 +423,4 @@ export class MarketsView {
   }
 }
 
-const copy = (c: CoreConfig): CoreConfig => ({ exchanges: [...c.exchanges], pairs: [...c.pairs], pollMs: c.pollMs });
+const copy = (c: CoreConfig): CoreConfig => ({ exchanges: [...c.exchanges], pairs: [...c.pairs], pollMs: c.pollMs, alerts: (c.alerts ?? []).map((a) => ({ ...a })) });

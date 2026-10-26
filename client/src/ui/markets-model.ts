@@ -90,7 +90,16 @@ export function draftProblems(draft: CoreConfig, limits: ConfigLimits): string[]
   return out;
 }
 
+/** Nível digitado ("0,05", "0.05%", "-0,1") → número em %, ou null fora da faixa ou do formato. */
+export function parseAlertPct(input: string, min = -1, max = 10): number | null {
+  const t = input.trim().replace('%', '').replace(',', '.').trim();
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return null;
+  const n = Number(t);
+  return n >= min && n <= max ? n : null;
+}
+
 export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
   const eq = (x: readonly string[], y: readonly string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
-  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs;
+  const alerts = (c: CoreConfig) => (c.alerts ?? []).map((x) => `${x.pair}@${x.abovePct}`);
+  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b));
 }

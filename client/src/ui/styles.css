@@ -11489,3 +11489,32 @@ button.ui-portfolio__sim:focus-visible {
   cursor: default;
   box-shadow: none;
 }
+/* Bullroom: alerta de spread no cartão da sala (painel Mercados). */
+.ui-mk__alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 3px 4px 3px 8px;
+  border-radius: 6px;
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+  font-size: 12.5px;
+}
+.ui-mk__alert-add {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding-left: 0;
+}
+.ui-mk__alert-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.ui-mk__pct {
+  width: 72px;
+  padding: 4px 8px;
+}

@@ -3363,4 +3363,15 @@ export const ES: Readonly<Record<string, string>> = {
   "Sugestões:": "Sugerencias:",
   "{0}. Clique para ver corretoras e pares.": "{0}. Haz clic para ver exchanges y pares.",
   "Corretoras e pares": "Exchanges y pares",
+
+  // Bullroom: alertas de spread (client/src/ui/markets.ts, shared/core/to-office.ts)
+  "Alerta: spread líquido ≥ {0}": "Alerta: spread neto ≥ {0}",
+  "Toca uma vez ao chegar ao nível e volta a valer depois que o spread recua.": "Suena una vez al llegar al nivel y se rearma cuando el spread retrocede.",
+  "Tirar o alerta de {0}": "Quitar la alerta de {0}",
+  "+ alerta de spread": "+ alerta de spread",
+  "Nível do alerta em % para {0}": "Nivel de la alerta en % para {0}",
+  "Nível do alerta: um número em % entre {0} e {1}.": "Nivel de la alerta: un número en % entre {0} y {1}.",
+  "Avisar quando o spread líquido chegar a": "Avisar cuando el spread neto llegue a",
+  "OK": "OK",
+  "{0}: spread líquido chegou a {1} (alerta em {2}), de {3} para {4}.": "{0}: el spread neto llegó a {1} (alerta en {2}), de {3} a {4}.",
 };

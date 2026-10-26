@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckResult } from '../../../shared/core/types';
-import { draftProblems, formatFee, isVolatile, normalizePair, roomSummary, sameConfig, searchExchanges } from './markets-model';
+import { draftProblems, formatFee, isVolatile, normalizePair, parseAlertPct, roomSummary, sameConfig, searchExchanges } from './markets-model';
 
-const LIMITS = { minExchanges: 2, maxExchanges: 20, maxPairs: 20, minPollMs: 5000, maxPollMs: 300000 };
+const LIMITS = { minExchanges: 2, maxExchanges: 20, maxPairs: 20, minPollMs: 5000, maxPollMs: 300000, maxAlerts: 20, minAlertPct: -1, maxAlertPct: 10 };
 
 const CHECK: CheckResult = {
   at: 1,
@@ -64,14 +64,30 @@ describe('painel Mercados: regras', () => {
   });
 
   it('problemas do rascunho seguem os limites do núcleo', () => {
-    expect(draftProblems({ exchanges: ['binance'], pairs: [], pollMs: 10000 }, LIMITS)).toHaveLength(2);
-    expect(draftProblems({ exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000 }, LIMITS)).toEqual([]);
+    expect(draftProblems({ exchanges: ['binance'], pairs: [], pollMs: 10000, alerts: [] }, LIMITS)).toHaveLength(2);
+    expect(draftProblems({ exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [] }, LIMITS)).toEqual([]);
   });
 
   it('compara configurações pela ordem e pelo intervalo', () => {
-    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000 };
+    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [] };
     expect(sameConfig(a, { ...a, exchanges: ['binance', 'okx'] })).toBe(true);
     expect(sameConfig(a, { ...a, exchanges: ['okx', 'binance'] })).toBe(false);
     expect(sameConfig(a, { ...a, pollMs: 20000 })).toBe(false);
+  });
+
+  it('nível do alerta aceita vírgula, ponto e %; recusa texto e fora da faixa', () => {
+    expect(parseAlertPct('0,05')).toBe(0.05);
+    expect(parseAlertPct(' 0.1% ')).toBe(0.1);
+    expect(parseAlertPct('-0,2')).toBe(-0.2);
+    expect(parseAlertPct('abc')).toBeNull();
+    expect(parseAlertPct('11')).toBeNull();
+    expect(parseAlertPct('')).toBeNull();
+  });
+
+  it('mudar ou tirar um alerta conta como mudança', () => {
+    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [{ pair: 'BTC/USDT', abovePct: 0.05 }] };
+    expect(sameConfig(a, { ...a, alerts: [{ pair: 'BTC/USDT', abovePct: 0.05 }] })).toBe(true);
+    expect(sameConfig(a, { ...a, alerts: [{ pair: 'BTC/USDT', abovePct: 0.1 }] })).toBe(false);
+    expect(sameConfig(a, { ...a, alerts: [] })).toBe(false);
   });
 });

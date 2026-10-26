@@ -64,4 +64,18 @@ describe('CoreOffice (núcleo → sala, conceito A)', () => {
     const b = off.apply({ ...STATE, rev: 1, at: NOW + 10_000 }).rev;
     expect(b).toBeGreaterThan(a);
   });
+
+  it('alertas viram aviso da sala uma vez; os que já existiam no primeiro estado ficam calados', () => {
+    const office = new CoreOffice(NOW);
+    const ev = (id: string, at = NOW) => ({ id, pair: 'USDC/USDT', abovePct: -0.2, netPct: -0.19, buyOn: 'binance', sellOn: 'coinbaseexchange', at });
+    expect(office.alertNotices({ ...STATE, alerts: [ev('a')] })).toEqual([]);
+    const fresh = office.alertNotices({ ...STATE, alerts: [ev('a'), ev('b', NOW + 5)] });
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]).toMatchObject({ id: 'core-alert-b', level: 'info', roomId: 'core:room:USDC/USDT', at: NOW + 5 });
+    expect(fresh[0].text).toContain('USDC/USDT');
+    expect(fresh[0].text).toContain('Coinbase');
+    expect(office.alertNotices({ ...STATE, alerts: [ev('a'), ev('b', NOW + 5)] })).toEqual([]);
+    // núcleo antigo, sem alertas: nada
+    expect(office.alertNotices(STATE)).toEqual([]);
+  });
 });

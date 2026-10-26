@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Alerta de spread (`?source=core`).** No painel Mercados, cada sala ganha "+ alerta de spread": avisa quando o
+  spread líquido do par chega a um nível (em %). Toca uma vez e só volta a valer depois que o spread recua, e o aviso
+  leva à sala do par. Fica salvo na configuração do núcleo do OpenSpread.
 - **Painel Mercados (`?source=core`).** Escolha as corretoras (cada uma vira um personagem) e os pares (cada um vira
   uma sala) sem editar arquivo: pelo selo LIVE da barra do topo ou em Configurações › Mercados. "Conferir" mostra
   quem lista cada par, com a taxa taker pública ao passar o mouse; "Salvar e aplicar" grava a configuração do núcleo
