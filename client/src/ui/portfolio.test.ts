@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { portfolioLine, sparkPoints } from './portfolio';
+import { portfolioLine, sourcesDown, sparkPoints } from './portfolio';
 
 const P = { simulated: true, totalPnlUsd: 33.96, bots: 54, trading: 25, ejected: 2, series: [] };
 
@@ -26,5 +26,16 @@ describe('carteira na barra do topo (Bullroom)', () => {
     }
     // o maior valor fica em cima (y menor)
     expect(s.points[1].y).toBeLessThan(s.points[2].y);
+  });
+
+  it('ao vivo com a lista de fontes: quantas corretoras respondem e quem está fora', () => {
+    const live = { ...P, simulated: false, unit: 'pct' as const, totalPnlUsd: -0.202, bots: 4, sources: [
+      { id: 'binance', name: 'Binance', ok: true },
+      { id: 'kraken', name: 'Kraken', ok: false, error: 'timeout' },
+      { id: 'okx', name: 'OKX', ok: true },
+    ] };
+    expect(portfolioLine(live, 'pt-BR')).toBe('-0,20% · melhor spread líquido · 2/3 corretoras ao vivo');
+    expect(sourcesDown(live)).toBe('Fora agora: Kraken (timeout)');
+    expect(sourcesDown({ ...live, sources: live.sources.map((x) => ({ ...x, ok: true })) })).toBe('');
   });
 });

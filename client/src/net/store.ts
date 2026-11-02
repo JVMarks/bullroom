@@ -557,6 +557,8 @@ export class OfficeStore {
       if (!state) return;
       this.applySnapshot(office.apply(state));
       for (const n of office.alertNotices(state)) this.emit('notice', n);
+      const feed = office.feed(state);
+      if (feed.length) this.applyFeed(feed);
     });
   }
 

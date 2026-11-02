@@ -3374,4 +3374,15 @@ export const ES: Readonly<Record<string, string>> = {
   "Avisar quando o spread líquido chegar a": "Avisar cuando el spread neto llegue a",
   "OK": "OK",
   "{0}: spread líquido chegou a {1} (alerta em {2}), de {3} para {4}.": "{0}: el spread neto llegó a {1} (alerta en {2}), de {3} a {4}.",
+
+  // Bullroom: pacote de acabamento (sidebar.ts, portfolio.ts, markets.ts, shared/core/to-office.ts)
+  "Ainda sem leitura desta corretora": "Aún sin lectura de este exchange",
+  "Respondendo": "Respondiendo",
+  "Fora agora: {0}": "Caído ahora: {0}",
+  "{0} · melhor spread líquido · {1}/{2} corretoras ao vivo": "{0} · mejor spread neto · {1}/{2} exchanges en vivo",
+  "Buscar sala, robô ou corretora": "Buscar sala, robot o exchange",
+  "{0} → {1} · {2}, já sem as taxas de compra e venda": "{0} → {1} · {2}, ya sin las comisiones de compra y venta",
+  "Spread líquido ficou positivo: {0}": "El spread neto pasó a positivo: {0}",
+  "Spread líquido voltou ao negativo: {0}": "El spread neto volvió a negativo: {0}",
+  "Melhor rota agora: {0} → {1}": "Mejor ruta ahora: {0} → {1}",
 };

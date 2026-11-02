@@ -12,6 +12,15 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Feed do modo ao vivo (`?source=core`).** A atividade deixa de ficar vazia: entra uma linha quando o melhor spread
+  líquido de um par fica positivo ou volta a negativo, e quando a melhor rota muda de corretoras (só depois de 3
+  leituras seguidas e no máximo uma vez a cada 5 minutos por par, para a sala não virar barulho).
+- **Corretoras ao vivo no topo.** A barra do topo mostra quantas corretoras estão respondendo ("5/5 corretoras ao
+  vivo"); a dica diz quem está fora e por quê, e o painel Mercados ganha uma bolinha verde/vermelha em cada uma.
+- **Salas no lugar de Escritório.** Nos modos de trading, a barra lateral se chama "Salas" e a busca fala em sala,
+  robô ou corretora; o chip de conta do Claude Code ("S") sai do feed.
+- **Placa da sala no celular.** Sem largura para tudo, a placa de uma sala de trading passa a ter duas linhas (o par
+  em cima, o PL embaixo) em vez de mostrar só o PL.
 - **Alerta de spread (`?source=core`).** No painel Mercados, cada sala ganha "+ alerta de spread": avisa quando o
   spread líquido do par chega a um nível (em %). Toca uma vez e só volta a valer depois que o spread recua, e o aviso
   leva à sala do par. Fica salvo na configuração do núcleo do OpenSpread.

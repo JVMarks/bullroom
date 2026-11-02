@@ -607,6 +607,7 @@ export class Overlay {
 
   private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number, unit?: ValueUnit): void {
     const { ctx } = this;
+    const fullW = maxW;
     let dots = accounts.filter((a) => this.sim.accounts.has(a));
     // Bullroom: PL da sala na placa; sem espaço, ele fica e a contagem sai
     const chipW = (t: string) => (t ? this.measure(LABEL_FONT, t) + 14 : 0);
@@ -631,6 +632,8 @@ export class Overlay {
     const extras = 18 + dots.length * 10 + cw + pw;
     // Só vira pílula compacta quando o nome precisou ser cortado (nomes curtos como "app" cabem inteiros).
     const compact = text !== name && text.length < 4;
+    // Bullroom: sala de trading estreita (celular, visão geral): em vez de sumir com o nome, placa de duas linhas
+    if (compact && pnlText) return this.drawStackedPill(name, cx, cy, fullW, accent, lit, pnlText, parts.tone);
     const tw = compact ? 0 : this.measure(ROOM_FONT, text);
     const w = Math.round(compact ? Math.max(12, 10 + cw + pw + dots.length * 10) : tw + extras);
     const h = 22;
@@ -684,6 +687,49 @@ export class Overlay {
       ctx.fillStyle = color;
       ctx.fillText(pnlText, dx + 7, y + h / 2 + 0.5);
     }
+    ctx.restore();
+    this.place(x, y, w, h);
+  }
+
+  /** Placa de sala de trading em duas linhas: o par em cima (fonte menor se precisar) e o PL embaixo. */
+  private drawStackedPill(name: string, cx: number, cy: number, maxW: number, accent: string, lit: boolean, pnlText: string, tone: PnlTone): void {
+    const { ctx } = this;
+    const font = this.measure(ROOM_FONT, name) <= maxW - 14 ? ROOM_FONT : CORE_FONT_SMALL;
+    const text = this.fit(font, name, maxW - 14);
+    const tw = this.measure(font, text);
+    const pw = this.measure(LABEL_FONT, pnlText) + 14;
+    const w = Math.round(Math.max(tw, pw - 4) + 16);
+    const h = 36;
+    const x = Math.round(cx - w / 2);
+    const y = Math.round(cy - h - 4);
+    ctx.save();
+    ctx.globalAlpha = lit ? 1 : 0.8;
+    ctx.fillStyle = 'rgba(16,20,32,0.28)';
+    ctx.beginPath();
+    ctx.roundRect(x, y + 2, w, h, 7);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(22,27,40,0.9)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 7);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.roundRect(x, y, 4, h, [7, 0, 0, 7]);
+    ctx.fill();
+    ctx.font = font;
+    ctx.fillStyle = '#f3f5fa';
+    ctx.fillText(text, x + 10, y + 10);
+    const color = PNL_COLORS[tone];
+    ctx.fillStyle = 'rgba(8,11,16,0.85)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + 18, pw - 4, 15, 5);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = LABEL_FONT;
+    ctx.fillStyle = color;
+    ctx.fillText(pnlText, x + 13, y + 25.5);
     ctx.restore();
     this.place(x, y, w, h);
   }

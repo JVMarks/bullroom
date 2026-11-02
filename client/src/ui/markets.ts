@@ -23,6 +23,8 @@ export class MarketsView {
   private busy: 'check' | 'save' | null = null;
   private note: { tone: Tone; lines: string[] } | null = null;
   private searching = false;
+  /** Assinatura do status das corretoras já desenhado (render só repinta as bolinhas quando ela muda). */
+  private sourcesSig = '';
   /** Par com o campo de novo alerta aberto. */
   private alertFor: string | null = null;
 
@@ -214,7 +216,13 @@ export class MarketsView {
   }
 
   render(): void {
-    // Tudo é redesenhado em paint(), quando algo do próprio painel muda (princípio da calma).
+    // O resto é redesenhado em paint(), quando algo do próprio painel muda (princípio da calma); aqui só as bolinhas
+    // de status das corretoras, quando alguma muda.
+    const sig = (this.ctx.store.snapshot?.portfolio?.sources ?? []).map((s) => `${s.id}:${s.ok}`).join(',');
+    if (sig !== this.sourcesSig) {
+      this.sourcesSig = sig;
+      if (this.phase === 'ready' && this.draft) this.paintExchanges();
+    }
   }
 
   private paint(): void {
@@ -261,6 +269,7 @@ export class MarketsView {
         h(
           'span',
           { class: 'ui-mk__chip', role: 'listitem' },
+          this.statusDot(id),
           exchangeName(id),
           h('button', {
             class: 'ui-mk__x',
@@ -273,6 +282,14 @@ export class MarketsView {
       ),
     );
     this.addExchange.disabled = d.exchanges.length >= this.info!.limits.maxExchanges;
+  }
+
+  /** Bolinha da corretora: verde = respondendo, vermelha = fora (com o motivo na dica), cinza = ainda sem leitura. */
+  private statusDot(id: string): HTMLElement {
+    const s = this.ctx.store.snapshot?.portfolio?.sources?.find((x) => x.id === id);
+    const cls = !s ? '' : s.ok ? ' is-ok' : ' is-off';
+    const title = !s ? tr('Ainda sem leitura desta corretora') : s.ok ? tr('Respondendo') : tr('Fora agora: {0}', [s.error ?? s.name]);
+    return h('span', { class: `ui-mk__dot${cls}`, title, attrs: { 'aria-label': title } });
   }
 
   private paintResults(): void {

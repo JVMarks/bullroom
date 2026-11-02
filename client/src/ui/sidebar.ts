@@ -7,7 +7,7 @@ import { moveRoom, orderRooms } from './roomorder';
 import { h, iconButton, KeyedList, setAttr, setHidden, setStyleVar, setText, setTitle } from './dom';
 import { plural, shortPath } from './format';
 import { ICONS } from './icons';
-import { groupRooms, type AgentNode, type RoomGroup } from './model';
+import { groupRooms, tradingOffice, type AgentNode, type RoomGroup } from './model';
 import { officeIsEmpty } from './overlays';
 import { createAgentRow, updateAgentRow } from './rows';
 import { createAccountChip, createProgress, updateAccountChip, updateProgress } from './widgets';
@@ -56,6 +56,9 @@ export class Sidebar implements UiComponent {
   private emptyText: HTMLElement;
   private clearBtn: HTMLButtonElement;
   private lastSelKey = '';
+  /** Título e busca mudam nos modos de trading (Bullroom): salas e corretoras, não escritório e contas. */
+  private title: HTMLElement;
+  private trading: boolean | null = null;
 
   constructor(private ctx: UiContext) {
     this.input = h('input', {
@@ -128,11 +131,12 @@ export class Sidebar implements UiComponent {
     this.empty = h('div', { class: 'ui-side__empty', hidden: true }, this.emptyText, this.clearBtn);
     this.scroller.append(this.empty);
 
+    this.title = h('h2', { text: tr('Escritório') });
     const close = iconButton(ICONS.close, tr('Fechar painel lateral'), () => ctx.togglePanel('sidebar', false), 'ui-side__close');
     this.el = h(
       'aside',
       { class: 'ui-panel ui-sidebar', attrs: { 'aria-label': tr('Salas e agentes'), id: 'ui-sidebar' } },
-      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, h('h2', { text: tr('Escritório') }), close), search, this.filters),
+      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, this.title, close), search, this.filters),
       this.scroller,
     );
   }
@@ -144,6 +148,14 @@ export class Sidebar implements UiComponent {
 
   render(): void {
     const snap = this.ctx.store.snapshot;
+    const trading = tradingOffice(snap);
+    if (trading !== this.trading) {
+      this.trading = trading;
+      setText(this.title, trading ? tr('Salas') : tr('Escritório'));
+      const hint = trading ? tr('Buscar sala, robô ou corretora') : tr('Buscar agente, projeto ou conta');
+      this.input.placeholder = hint;
+      this.input.setAttribute('aria-label', hint);
+    }
     const accounts = snap?.accounts ?? [];
     const hidden = new Set(this.ctx.prefs.hiddenAccounts);
     this.filterList.sync(accounts.length > 1 ? accounts : []);

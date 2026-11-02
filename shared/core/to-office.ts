@@ -1,11 +1,14 @@
 // Núcleo do OpenSpread → escritório do Bullroom (conceito A: cada corretora é um personagem na sala do par).
 // Puro, com uma memória pequena (a série de cada sala). Código sem Node e sem DOM.
-import type { AgentInfo, Notice, OfficeSnapshot, RoomInfo } from '../types';
+import type { AgentInfo, FeedItem, Notice, OfficeSnapshot, RoomInfo } from '../types';
 import { hash32 } from '../hash';
 import { intlLocale, tr } from '../i18n';
 import type { CoreState } from './types';
 
 const SERIES_MAX = 360;
+/** Feed ao vivo: leituras seguidas para aceitar uma rota nova e intervalo mínimo entre avisos de rota do mesmo par. */
+export const ROUTE_STABLE = 3;
+export const ROUTE_GAP_MS = 5 * 60_000;
 
 /** Endereço do núcleo local do OpenSpread (stream em /v1/stream; configuração em /v1/config e /v1/check). */
 export const CORE_BASE = 'http://127.0.0.1:4848';
@@ -49,6 +52,8 @@ export class CoreOffice {
   /** Rev próprio, sempre crescente: o do núcleo volta a 1 quando ele reinicia, e o store descartaria o snapshot. */
   private rev = 0;
 
+  /** Feed ao vivo: último sinal e rota de cada par, rota candidata (leituras seguidas) e hora do último aviso de rota. */
+  private routes = new Map<string, { positive: boolean; route: string; pending: string; seen: number; routeAt: number }>();
   /** Alertas já vistos (por id) e se o primeiro estado já chegou. */
   private seenAlerts = new Set<string>();
   private alertsPrimed = false;
@@ -106,7 +111,16 @@ export class CoreOffice {
       rooms,
       agents,
       accounts: [],
-      portfolio: { simulated: false, unit: 'pct', totalPnlUsd: top, bots: online, trading: online, ejected: 0, series: this.total.map((x) => ({ ...x })) },
+      portfolio: {
+        simulated: false,
+        unit: 'pct',
+        totalPnlUsd: top,
+        bots: online,
+        trading: online,
+        ejected: 0,
+        series: this.total.map((x) => ({ ...x })),
+        sources: state.exchanges.map((e) => ({ id: e.id, name: exchangeName(e.id), ok: e.ok, ...(e.ok || !e.error ? {} : { error: e.error }) })),
+      },
       meta: { demo: false, sources: [], startedAt: this.startedAt, version: 'core' },
     };
   }
@@ -132,6 +146,50 @@ export class CoreOffice {
       roomId: `core:room:${e.pair}`,
       at: e.at,
     }));
+  }
+
+
+  /**
+   * Linhas do feed no modo ao vivo (princípio da calma): o primeiro estado de cada par só é registrado; mudança de
+   * sinal do melhor spread líquido entra na hora; mudança de rota (outra dupla de corretoras) só depois de
+   * ROUTE_STABLE leituras seguidas e no máximo uma vez a cada ROUTE_GAP_MS por par.
+   */
+  feed(state: CoreState): FeedItem[] {
+    const out: FeedItem[] = [];
+    const pct = (n: number) => `${n > 0 ? '+' : ''}${new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}%`;
+    for (const p of state.pairs) {
+      if (!p.best) continue;
+      const b = p.best;
+      const positive = b.netPct > 0;
+      const route = `${b.buyOn}>${b.sellOn}`;
+      const prev = this.routes.get(p.pair);
+      if (!prev) {
+        this.routes.set(p.pair, { positive, route, pending: route, seen: 0, routeAt: state.at });
+        continue;
+      }
+      const item = (kind: string, icon: string, text: string): FeedItem => {
+        const activity = { id: `core-feed:${p.pair}:${state.at}:${kind}`, kind: 'other' as const, icon, text, detail: tr('{0} → {1} · {2}, já sem as taxas de compra e venda', [exchangeName(b.buyOn), exchangeName(b.sellOn), pct(b.netPct)]), at: state.at };
+        return { id: activity.id, agentId: `core:${b.sellOn}:${p.pair}`, roomId: `core:room:${p.pair}`, agentName: exchangeName(b.sellOn), roomName: p.pair, activity };
+      };
+      if (positive !== prev.positive) {
+        out.push(positive ? item('up', '✅', tr('Spread líquido ficou positivo: {0}', [pct(b.netPct)])) : item('down', '🔻', tr('Spread líquido voltou ao negativo: {0}', [pct(b.netPct)])));
+        prev.positive = positive;
+      }
+      if (route === prev.route) {
+        prev.pending = route;
+        prev.seen = 0;
+      } else {
+        prev.seen = route === prev.pending ? prev.seen + 1 : 1;
+        prev.pending = route;
+        if (prev.seen >= ROUTE_STABLE && state.at - prev.routeAt >= ROUTE_GAP_MS) {
+          out.push(item('route', '🔀', tr('Melhor rota agora: {0} → {1}', [exchangeName(b.buyOn), exchangeName(b.sellOn)])));
+          prev.route = route;
+          prev.routeAt = state.at;
+          prev.seen = 0;
+        }
+      }
+    }
+    return out;
   }
 
 }

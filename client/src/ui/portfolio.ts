@@ -13,9 +13,19 @@ const TONE_COLOR = { gain: '#4ade80', loss: '#f87171', zero: '#a1a9b8' } as cons
 export function portfolioLine(p: PortfolioInfo, locale: string): string {
   const total = formatValue(p.totalPnlUsd, p.unit, locale);
   // ao vivo (núcleo do OpenSpread): melhor spread líquido entre as salas e corretoras online
-  if (p.unit === 'pct') return tr('{0} · melhor spread líquido · {1}', [total, p.bots === 1 ? tr('1 corretora') : tr('{0} corretoras', [p.bots])]);
+  if (p.unit === 'pct') {
+    // com a lista de fontes: "4/5 corretoras ao vivo" (quantas respondem de quantas foram pedidas)
+    if (p.sources?.length) return tr('{0} · melhor spread líquido · {1}/{2} corretoras ao vivo', [total, p.sources.filter((s) => s.ok).length, p.sources.length]);
+    return tr('{0} · melhor spread líquido · {1}', [total, p.bots === 1 ? tr('1 corretora') : tr('{0} corretoras', [p.bots])]);
+  }
   const bots = p.bots === 1 ? tr('1 robô') : tr('{0} robôs', [p.bots]);
   return tr('{0} · {1} · {2} em operação', [total, bots, p.trading]);
+}
+
+/** Corretoras que não estão respondendo, para a dica do topo ("Fora agora: Kraken (timeout)"); vazio = todas ok. Puro. */
+export function sourcesDown(p: PortfolioInfo): string {
+  const down = (p.sources ?? []).filter((s) => !s.ok);
+  return down.length ? tr('Fora agora: {0}', [down.map((s) => (s.error ? `${s.name} (${s.error})` : s.name)).join('; ')]) : '';
 }
 
 /** Pontos do mini-gráfico numa caixa w×h (y para baixo); `up` = o último ponto é ≥ 0. Puro (testável). */
@@ -65,7 +75,7 @@ export class PortfolioBar {
     setTitle(
       this.el,
       p.unit === 'pct'
-        ? tr('{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.', [portfolioLine(p, locale)])
+        ? [tr('{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.', [portfolioLine(p, locale)]), sourcesDown(p)].filter(Boolean).join('\n')
         : tr('Carteira: {0}. Ejetados hoje: {1}.', [portfolioLine(p, locale), p.ejected]),
     );
     this.drawSpark(p.series);

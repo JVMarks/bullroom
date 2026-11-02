@@ -225,7 +225,8 @@ export class FeedPanel implements UiComponent {
     setText(who, f.agentName);
     const acc = this.accountOf(f);
     updateAccountChip(chip, acc ? this.ctx.account(acc) : undefined, acc ?? '');
-    setHidden(chip, !acc);
+    // Bullroom: robô e corretora não têm conta do Claude Code (o chip "S"/"C" do habblaud sairia)
+    setHidden(chip, !acc || tradingOffice(this.ctx.store.snapshot));
     setText(room, f.roomName);
     setText(icon, f.activity.icon);
     setText(text, f.activity.text);

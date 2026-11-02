@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CoreOffice } from './to-office';
+import { CoreOffice, ROUTE_GAP_MS, ROUTE_STABLE } from './to-office';
 import type { CoreState, Quote } from './types';
 
 const NOW = 1_760_000_000_000;
@@ -77,5 +77,43 @@ describe('CoreOffice (núcleo → sala, conceito A)', () => {
     expect(office.alertNotices({ ...STATE, alerts: [ev('a'), ev('b', NOW + 5)] })).toEqual([]);
     // núcleo antigo, sem alertas: nada
     expect(office.alertNotices(STATE)).toEqual([]);
+  });
+
+  it('carteira ao vivo traz o status de cada corretora (com o motivo de quem está fora)', () => {
+    const snap = new CoreOffice(NOW).apply(STATE);
+    expect(snap.portfolio!.sources).toEqual([
+      { id: 'binance', name: 'Binance', ok: true },
+      { id: 'okx', name: 'OKX', ok: true },
+      { id: 'kraken', name: 'Kraken', ok: false, error: 'timeout' },
+    ]);
+  });
+
+  it('feed ao vivo: calado na abertura, mudança de sinal na hora, rota só estável e espaçada', () => {
+    const office = new CoreOffice(NOW);
+    const st = (at: number, netPct: number, buyOn = 'binance', sellOn = 'okx'): CoreState => ({
+      ...STATE,
+      at,
+      pairs: [{ pair: 'USDC/USDT', quotes: [], best: { pair: 'USDC/USDT', buyOn, sellOn, grossPct: netPct + 0.2, netPct } }],
+    });
+    expect(office.feed(st(NOW, -0.2))).toEqual([]);
+    const up = office.feed(st(NOW + 10_000, 0.03));
+    expect(up).toHaveLength(1);
+    expect(up[0]).toMatchObject({ roomId: 'core:room:USDC/USDT', agentId: 'core:okx:USDC/USDT', roomName: 'USDC/USDT' });
+    expect(up[0].activity.text).toContain('positivo');
+    expect(office.feed(st(NOW + 20_000, 0.04))).toEqual([]);
+    expect(office.feed(st(NOW + 30_000, -0.1))[0].activity.text).toContain('negativo');
+    // rota nova: só depois de ROUTE_STABLE leituras seguidas, e respeitando o intervalo desde a última
+    let t = NOW + 30_000;
+    const flips: number[] = [];
+    for (let i = 0; i < ROUTE_STABLE + 2; i++) flips.push(office.feed(st((t += 10_000), -0.1, 'bybit', 'binance')).length);
+    expect(flips.every((n) => n === 0)).toBe(true); // ainda dentro do intervalo mínimo desde a abertura
+    t = NOW + ROUTE_GAP_MS + 60_000;
+    const later = office.feed(st(t, -0.1, 'bybit', 'binance'));
+    expect(later).toHaveLength(1);
+    expect(later[0].activity.text).toContain('Bybit → Binance');
+    // rota que pisca (uma leitura só) não vira aviso
+    const t2 = t + ROUTE_GAP_MS + 60_000;
+    expect(office.feed(st(t2, -0.1, 'kraken', 'okx'))).toEqual([]);
+    expect(office.feed(st(t2 + 10_000, -0.1, 'bybit', 'binance'))).toEqual([]);
   });
 });

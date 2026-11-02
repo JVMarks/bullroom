@@ -11518,3 +11518,18 @@ button.ui-portfolio__sim:focus-visible {
   width: 72px;
   padding: 4px 8px;
 }
+/* Bullroom: status de cada corretora nas etiquetas do painel Mercados (verde respondendo, vermelha fora). */
+.ui-mk__dot {
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--st-idle);
+  flex: none;
+}
+.ui-mk__dot.is-ok {
+  background: var(--lv-ok);
+}
+.ui-mk__dot.is-off {
+  background: var(--lv-crit);
+}

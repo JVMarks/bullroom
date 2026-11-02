@@ -65,6 +65,8 @@ export interface PortfolioInfo {
   ejected: number;
   /** PL total ao longo do tempo, do mais antigo para o mais recente. */
   series: Array<{ at: number; pnlUsd: number }>;
+  /** Ao vivo (núcleo do OpenSpread): cada corretora lida e se está respondendo. Ausente no simulador. */
+  sources?: Array<{ id: string; name: string; ok: boolean; error?: string }>;
 }
 
 export type PnlTone = 'gain' | 'loss' | 'zero';
