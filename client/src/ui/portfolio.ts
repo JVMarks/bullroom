@@ -61,9 +61,12 @@ export class PortfolioBar {
   private drawn = '';
 
   /** `onBadge`: clique no selo SIMULATED / LIVE abre o painel "Mercados". */
-  constructor(onBadge?: () => void) {
+  /** `onTotal`: clique no número do topo abre o painel "Spreads" (janelas de 5 min, 1 h e 24 h). */
+  constructor(onBadge?: () => void, onTotal?: () => void) {
     this.clickable = !!onBadge;
-    this.total = h('span', { class: 'ui-portfolio__total' });
+    this.total = onTotal
+      ? h('button', { class: 'ui-portfolio__total', type: 'button', title: tr('Ver o spread de cada sala em 5 min, 1 h e 24 h'), on: { click: onTotal } })
+      : h('span', { class: 'ui-portfolio__total' });
     this.rest = h('span', { class: 'ui-portfolio__rest' });
     this.canvas = h('canvas', { class: 'ui-portfolio__spark', attrs: { width: String(SPARK_W * 2), height: String(SPARK_H * 2), 'aria-hidden': 'true' } });
     this.badge = onBadge ? h('button', { class: 'ui-portfolio__sim', type: 'button', on: { click: onBadge } }) : h('span', { class: 'ui-portfolio__sim' });

@@ -11565,3 +11565,115 @@ button.ui-portfolio__sim:focus-visible {
   gap: 6px 14px;
   margin: 6px 0;
 }
+/* Bullroom: número do topo como botão (abre o painel "Spreads"). */
+button.ui-portfolio__total {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+button.ui-portfolio__total:hover {
+  text-decoration: underline dotted;
+}
+button.ui-portfolio__total:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+
+/* Bullroom: painel "Spreads" e janelas no cartão da sala (ui/spreads.ts). */
+.ui-sp__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ui-sp__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ui-sp__table th,
+.ui-sp__table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--ui-line);
+  text-align: right;
+  white-space: nowrap;
+}
+.ui-sp__table th:first-child,
+.ui-sp__table td:first-child {
+  text-align: left;
+}
+.ui-sp__table th {
+  color: var(--ui-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+.ui-sp__now {
+  font-weight: 700;
+}
+.ui-sp__now.is-up,
+.ui-sp__chg.is-up {
+  color: var(--lv-ok);
+}
+.ui-sp__now.is-down,
+.ui-sp__chg.is-down {
+  color: var(--lv-crit);
+}
+.ui-sp__chg.is-flat,
+.ui-sp__none {
+  color: var(--ui-muted);
+}
+.ui-sp__rrow {
+  display: grid;
+  grid-template-columns: 1fr auto 120px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ui-sp__rnum {
+  color: var(--ui-muted);
+}
+.ui-sp__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.ui-sp__bar i {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: 10px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--ui-text);
+}
+.ui-sp__boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.ui-sp__box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--radius);
+  font-variant-numeric: tabular-nums;
+}
+.ui-sp__wlabel {
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+.ui-sp__box .ui-sp__chg {
+  font-weight: 700;
+  font-size: 16px;
+}
+.ui-sp__range,
+.ui-sp__box .ui-sp__none {
+  color: var(--ui-muted);
+  font-size: 11.5px;
+}

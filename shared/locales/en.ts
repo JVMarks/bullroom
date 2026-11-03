@@ -3435,4 +3435,21 @@ export const EN: Readonly<Record<string, string>> = {
   "Projeto educativo: não é recomendação de investimento.": "Educational project: not investment advice.",
   "Etiqueta com o nome acima de cada robô ou corretora.": "Name tag above each bot or exchange.",
   "Movimento pela sala": "Movement around the room",
+
+  // Bullroom: spread em janelas de tempo (spreads.ts, portfolio.ts, drawer.ts)
+  "Spread em janelas": "Spread over time windows",
+  "Spreads": "Spreads",
+  "Ver o spread de cada sala em 5 min, 1 h e 24 h": "See each room's spread over 5 min, 1 h and 24 h",
+  "5 min": "5 min",
+  "1 h": "1 h",
+  "24 h": "24 h",
+  "sem histórico ainda": "no history yet",
+  "{0} a {1}": "{0} to {1}",
+  "Melhor spread líquido de cada sala agora e quanto mudou em cada janela, em pontos percentuais.": "Each room's best net spread now and how much it changed in each window, in percentage points.",
+  "Só ao vivo: rode o OpenSpread no seu computador e abra o Bullroom com ?source=core.": "Live only: run OpenSpread on your computer and open Bullroom with ?source=core.",
+  "Esperando a primeira leitura do núcleo…": "Waiting for the core's first reading…",
+  "Par": "Pair",
+  "Faixa de 24 h (mínimo · agora · máximo)": "24 h range (low · now · high)",
+  "Aparece depois de 24 h de leitura (o histórico fica salvo no seu computador).": "Shows up after 24 h of readings (the history is saved on your computer).",
+  "Uma amostra por minuto, guardada pelo núcleo em history.json, ao lado da configuração. Com o saque informado em Mercados, os números já o incluem.": "One sample per minute, kept by the core in history.json next to the settings. With the withdrawal fee set in Markets, the numbers already include it.",
 };

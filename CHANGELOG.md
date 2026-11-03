@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Spread em janelas de tempo (`?source=core`).** Clicar no número do topo abre o painel "Spreads": o melhor spread
+  líquido de cada sala agora e quanto mudou em 5 min, 1 h e 24 h (▲/▼ em pontos percentuais), mais a faixa de 24 h
+  (mínimo · agora · máximo). O cartão de cada sala ganha "Spread em janelas" com as três caixas. O histórico (uma
+  amostra por minuto, 25 h) fica no núcleo do OpenSpread, salvo no seu computador.
 - **Placa com a força do PL.** O chip do PL na placa de cada sala de trading fica mais forte quanto maior o PL em
   relação às outras salas (a sala que mais ganha ou mais perde se destaca de longe), com texto branco quando forte.
   Estático, sem animação.
