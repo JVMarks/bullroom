@@ -144,7 +144,8 @@ function glowSprite(theme: SeasonalTheme): HTMLCanvasElement {
 }
 
 /** Luz decorativa suave, limitada à face da parede. Não interfere com salas apagadas. */
-export function drawSeasonalLights(ctx: CanvasRenderingContext2D, theme: SeasonalTheme, layout: AreaLayout, light: number): void {
+/** `skip` = trechos da parede (x em px do mundo) sem luzinha: o telão largo, onde elas cobririam o número. */
+export function drawSeasonalLights(ctx: CanvasRenderingContext2D, theme: SeasonalTheme, layout: AreaLayout, light: number, skip: ReadonlyArray<{ x0: number; x1: number }> = []): void {
   if (theme === 'none' || light <= 0.01) return;
   ctx.save();
   for (const wall of layout.walls) {
@@ -155,6 +156,7 @@ export function drawSeasonalLights(ctx: CanvasRenderingContext2D, theme: Seasona
     ctx.clip();
     for (let x = wall.x + 14; x < wall.x + wall.w - 6; x += 24) {
       if (wall.doorways?.some((d) => x >= d.x - 10 && x <= d.x + d.w + 10)) continue;
+      if (skip.some((s) => x >= s.x0 - 4 && x <= s.x1 + 4)) continue;
       ctx.globalAlpha = light * 0.3;
       ctx.drawImage(glowSprite(theme), Math.round(x - 17), wall.y - 8);
       ctx.globalAlpha = light * 0.85;

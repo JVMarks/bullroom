@@ -20,6 +20,8 @@ export interface RoomInput {
   id: string;
   slot: number;
   seed: number;
+  /** Bullroom: sala de trading. A lousa vira o telão largo (centrado na ilha) e a estante de parede sai. */
+  trading?: boolean;
 }
 
 const PLANTS_TALL = ['palm', 'ficus', 'monstera', 'bonsai'] as const;
@@ -122,8 +124,10 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
   // ---- itens de parede
   const signCx = north ? 8 : 10.5;
   area.signId = wallItem('sign', signCx, undefined, { order: 0.95 });
+  // Bullroom: o telão largo (68 px) fica centrado na ilha de mesas; a lousa comum continua onde sempre esteve
+  const screen = !!room.trading;
   if (north) {
-    wallItem('whiteboard', 4.5, undefined, { order: 0.6 });
+    wallItem('whiteboard', screen ? 4 : 4.5, undefined, { order: 0.6 });
     wallItem('clock', 10, undefined, { order: 0.7 });
     wallItem('poster', 11.1, pick(POSTERS), { order: 0.5 });
     wallItem('window', 12.75, undefined, { order: 0.4 });
@@ -131,7 +135,7 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
     wallItem('light_switch', DOOR_X - 0.5, 'on', { ly: 12, on: 'south', order: 0.8 });
     spot('switch', DOOR_X - 1, 10, 'down', { dy: -1 });
   } else {
-    wallItem('whiteboard', 2.5, undefined, { order: 0.6 });
+    wallItem('whiteboard', screen ? 3.4 : 2.5, undefined, { order: 0.6 });
     wallItem('light_switch', DOOR_X - 0.5, 'on', { order: 0.8 });
     wallItem('clock', 12.3, undefined, { order: 0.7 });
     wallItem('poster', 13.35, pick(POSTERS), { order: 0.5 });
@@ -182,7 +186,8 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
   // ---- apoio: estante na parede norte (sem cobrir quadro, placa ou janela) e coluna junto à parede
   const tall = pick(PLANTS_TALL);
   const shelfX = north ? 1 : 4;
-  furn('bookshelf', shelfX, 2, undefined, { order: 0.25 });
+  // na sala de trading a estante cobriria o telão; o lugar em pé continua (agora de frente para o telão)
+  if (!screen) furn('bookshelf', shelfX, 2, undefined, { order: 0.25 });
   spot('shelf', shelfX, 3, 'up', { dx: 8, dy: -2 });
   furn('plant_tall', 14, 2, tall, { order: 0.2 });
   if (north) spot('window', 12, 2, 'up', { dx: 12, dy: 1 });

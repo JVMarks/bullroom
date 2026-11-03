@@ -8,7 +8,7 @@ import { HAIR, HEAD_BASE } from './character/hair';
 import { CHAR_AX, CHAR_AY, CHAR_H, CHAR_W, POSE_DURATION, POSE_FRAMES, isSeated, renderCharacter } from './character/render';
 import { PixelBuf } from './core/pixbuf';
 import type { BufSprite } from './core/sprite';
-import { chartColumns, drawBoard, drawClock, drawRoomChart, drawScreen, drawWindowView } from './dynamic';
+import { chartColumns, drawBoard, drawClock, drawRoomChart, drawScreen, drawWallScreen, drawWindowView } from './dynamic';
 import { normalizeFurniture, renderFurniture } from './furniture/index';
 import { ICON_NAMES, iconTemplates, renderIcon } from './icons';
 import { CHUNK_PX, floorChunk } from './surfaces/floor';
@@ -687,11 +687,18 @@ describe('desenhos por quadro', () => {
   /** Contexto falso que registra os fillRect (únicas chamadas permitidas). */
   function fakeCtx() {
     const rects: [number, number, number, number][] = [];
+    // translate/scale (texto em letras duplas do telão) entram nos retângulos anotados
+    let t = { x: 0, y: 0, s: 1 };
+    const stack: (typeof t)[] = [];
     const ctx = {
       fillStyle: '',
       fillRect(x: number, y: number, w: number, h: number) {
-        rects.push([x, y, w, h]);
+        rects.push([t.x + x * t.s, t.y + y * t.s, w * t.s, h * t.s]);
       },
+      save: () => stack.push({ ...t }),
+      restore: () => (t = stack.pop() ?? { x: 0, y: 0, s: 1 }),
+      translate: (x: number, y: number) => (t = { ...t, x: t.x + x * t.s, y: t.y + y * t.s }),
+      scale: (s: number) => (t = { ...t, s: t.s * s }),
     } as unknown as CanvasRenderingContext2D;
     return { ctx, rects };
   }
@@ -853,6 +860,21 @@ describe('desenhos por quadro', () => {
       const tv = fakeCtx();
       drawRoomChart(tv.ctx, board, series, '-123,45');
       expect(inside(tv.rects, board), `série de ${series.length}`).toBe(true);
+    }
+    // Bullroom: telão largo (PL grande, série e a faixa com o melhor e o pior), sempre dentro da tela
+    const screen = { x: 8, y: -25, w: 64, h: 17 };
+    const rows = [
+      { name: 'binance', value: '+1,3', tone: 'gain' as const },
+      { name: 'kraken', value: '-0,4', tone: 'loss' as const },
+    ];
+    for (const label of ['+0,04', '-1234,56', '+123456789,00', '']) {
+      for (const series of [[], Array.from({ length: 360 }, (_, i) => ({ pnlUsd: Math.cos(i / 7) * 3 }))]) {
+        for (const rs of [rows, rows.slice(0, 1), []]) {
+          const tv = fakeCtx();
+          drawWallScreen(tv.ctx, screen, series, label, rs);
+          expect(inside(tv.rects, screen), `"${label}" ${series.length} ${rs.length}`).toBe(true);
+        }
+      }
     }
     const face = { x: 3, y: 3, w: 10, h: 10 };
     const c = fakeCtx();

@@ -156,7 +156,7 @@ export type FurnitureKind =
   | 'floor_lamp' // 1x1 luminária de chão. rects.glow = centro da luz.
   | 'water_cooler' // 1x1 bebedouro com galão azul. Uso: personagem fica ao SUL, virado para cima.
   // --- montados na parede norte (mount: 'wall')
-  | 'whiteboard' // 3 tiles de largura. Quadro kanban. rects.board = área onde o render desenha post-its.
+  | 'whiteboard' // 3 tiles de largura. Quadro kanban. rects.board = área onde o render desenha post-its. variants: 'board' | 'screen' (Bullroom: telão largo, 68 px, que passa das 3 tiles; rects.board = tela)
   | 'window' // 2 tiles. Janela; rects.glass = vidro (o render desenha o céu antes da moldura).
   | 'clock' // 1 tile. Relógio; rects.face = mostrador (ponteiros desenhados pelo render).
   | 'poster' // 1 tile. variants: 'code' | 'coffee' | 'rocket' | 'cat' | 'bug' | 'ship_it'
@@ -233,7 +233,7 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   stool: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true },
   floor_lamp: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   water_cooler: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
-  whiteboard: { mount: 'wall', footprint: { w: 3, h: 0 }, blocks: false },
+  whiteboard: { mount: 'wall', footprint: { w: 3, h: 0 }, blocks: false, variants: ['board', 'screen'] },
   window: { mount: 'wall', footprint: { w: 2, h: 0 }, blocks: false },
   clock: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
   poster: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false, variants: ['code', 'coffee', 'rocket', 'cat', 'bug', 'ship_it'] },
@@ -363,6 +363,14 @@ export interface ArtModule {
   drawBoard(ctx: CanvasRenderingContext2D, r: Rect, items: readonly { status: 'pending' | 'in_progress' | 'completed' }[], t: number): void;
   /** Bullroom: telão da sala na lousa (PL da sala em pixels + linha da série). */
   drawRoomChart(ctx: CanvasRenderingContext2D, r: Rect, series: readonly { pnlUsd: number }[], label: string): void;
+  /** Bullroom: telão largo de parede (variante 'screen' da lousa): PL grande, série e o melhor e o pior da sala. */
+  drawWallScreen(
+    ctx: CanvasRenderingContext2D,
+    r: Rect,
+    series: readonly { pnlUsd: number }[],
+    label: string,
+    rows: readonly { name: string; value: string; tone: 'gain' | 'loss' | 'zero' }[],
+  ): void;
   /** Céu + horizonte visto pela janela conforme a hora local (0–24, fracionária). */
   drawWindowView(ctx: CanvasRenderingContext2D, r: Rect, hour: number, t: number, seed: number): void;
   drawClock(ctx: CanvasRenderingContext2D, r: Rect, date: Date): void;

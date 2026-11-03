@@ -22,9 +22,23 @@ import { Particles } from './particles';
 import { carSprite, propSprite, shadowSprite } from './props';
 import { countBadge, fallbackIcon } from './shell-sprites';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalCostume, seasonalFurniture } from './seasonal';
-import { formatValue } from '../../../../shared/trading/rules';
+import { formatValue, valueTone } from '../../../../shared/trading/rules';
 import { intlLocale } from '../../../../shared/i18n';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
+
+/** Moldura do telão no sprite (px da folha): começa em 7 e termina em 78 (com contorno e sombra). */
+const SCREEN_BODY = { left: 7, right: 78 };
+/** Folga das quinas da parede (meia tile de parede + 4 px). */
+const SCREEN_EDGE = 12;
+
+/** Quanto empurrar o telão para ele não entrar nas quinas da sala (a lousa de 3 tiles cabia; o telão é mais largo). */
+export function wallScreenShift(x: number, _w: number, area: { x: number; w: number }): number {
+  const left = x + SCREEN_BODY.left;
+  const right = x + SCREEN_BODY.right;
+  if (left < area.x + SCREEN_EDGE) return area.x + SCREEN_EDGE - left;
+  if (right > area.x + area.w - SCREEN_EDGE) return area.x + area.w - SCREEN_EDGE - right;
+  return 0;
+}
 
 const enum K {
   FurnBase,
@@ -503,7 +517,7 @@ export class Renderer {
       for (const vis of this.areas.values()) {
         if (vis.room && vis.room.phase !== 'ready') continue;
         if (!visible(vis.px.x, vis.px.y, vis.px.w, vis.px.h)) continue;
-        drawSeasonalLights(ctx, this.theme, vis.layout, vis.room ? vis.room.light(now) : 1);
+        drawSeasonalLights(ctx, this.theme, vis.layout, vis.room ? vis.room.light(now) : 1, this.wallScreenSpans(vis));
       }
     }
     // giroflex e balão "!" do alarme de CI (brilham também no escuro)
@@ -618,16 +632,19 @@ export class Renderer {
         return;
       }
       case 'whiteboard': {
-        const s = wallSprites(this.art, 'whiteboard', w.variant, 0, w.seed);
+        // Bullroom: sala de trading troca a lousa pelo telão largo (PL da sala, série e placar); sala comum fica igual
+        const trading = vis.room?.info.trading;
+        const s = wallSprites(this.art, 'whiteboard', trading ? 'screen' : w.variant, 0, w.seed);
         if (!s) return;
         const o = wallItemOrigin(w, s.base);
+        if (trading) o.x += wallScreenShift(o.x, s.base.canvas.width, vis.px);
         ctx.drawImage(s.base.canvas, o.x, o.y + rise);
         const r = s.base.rects?.board;
         const board = r && { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h };
-        // Bullroom: sala de trading vira telão com o PL da sala; sala comum mantém o quadro de tarefas
-        const trading = vis.room?.info.trading;
-        if (board && trading) this.safe(() => this.art.drawRoomChart(ctx, board, trading.series, formatValue(trading.pnlUsd, trading.unit, intlLocale()).replace('$', '').replace('%', '')));
-        else if (board) this.safe(() => this.art.drawBoard(ctx, board, vis.room?.board ?? [], now));
+        if (board && trading) {
+          const label = formatValue(trading.pnlUsd, trading.unit, intlLocale()).replace('$', '').replace('%', '');
+          this.safe(() => this.art.drawWallScreen(ctx, board, trading.series, label, this.roomScoreboard(vis.id)));
+        } else if (board) this.safe(() => this.art.drawBoard(ctx, board, vis.room?.board ?? [], now));
         return;
       }
       case 'tv': {
@@ -1221,6 +1238,36 @@ export class Renderer {
       ctx.fillRect(s.x, s.y, s.w, s.h);
     }
     this.lighting.drawGlows(ctx, this, view, now);
+  }
+
+  /** Onde está o telão largo da sala (px do mundo), para as luzinhas da época não passarem por cima dele. */
+  private wallScreenSpans(vis: AreaVis): Array<{ x0: number; x1: number }> {
+    if (!vis.room?.info.trading) return [];
+    const out: Array<{ x0: number; x1: number }> = [];
+    for (const w of vis.wallItems) {
+      if (w.kind !== 'whiteboard') continue;
+      const s = wallSprites(this.art, 'whiteboard', 'screen', 0, w.seed);
+      if (!s) continue;
+      const o = wallItemOrigin(w, s.base);
+      const x = o.x + wallScreenShift(o.x, s.base.canvas.width, vis.px);
+      out.push({ x0: x + SCREEN_BODY.left, x1: x + SCREEN_BODY.right });
+    }
+    return out;
+  }
+
+  /** Faixa do telão: o melhor e o pior da sala (robôs pelo PL, corretoras pelo balão); com um só, só ele. */
+  private roomScoreboard(roomId: string): Array<{ name: string; value: string; tone: 'gain' | 'loss' | 'zero' }> {
+    const locale = intlLocale();
+    const list: Array<{ name: string; v: number; unit: Parameters<typeof formatValue>[1] }> = [];
+    for (const ch of this.sim.chars.values()) {
+      if (ch.info.roomId !== roomId) continue;
+      const t = ch.info.trading;
+      if (t) list.push({ name: ch.info.name, v: t.pnlUsd, unit: 'usd' });
+      else if (ch.info.badge) list.push({ name: ch.info.name, v: ch.info.badge.value, unit: ch.info.badge.unit });
+    }
+    list.sort((a, b) => b.v - a.v || a.name.localeCompare(b.name));
+    const pick = list.length > 1 ? [list[0], list[list.length - 1]] : list;
+    return pick.map((x) => ({ name: x.name, value: formatValue(x.v, x.unit, locale).replace('$', '').replace('%', '').replace(' bp', ''), tone: valueTone(x.v, x.unit) }));
   }
 
   private safe(fn: () => void): void {

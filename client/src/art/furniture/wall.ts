@@ -41,6 +41,35 @@ export function whiteboard(): BufFurniture {
   return { base: s };
 }
 
+/**
+ * Bullroom: telão largo de parede no lugar da lousa nas salas de trading. 68 px de largura (passa das 3 tiles da
+ * lousa; o render o encaixa entre as quinas e a placa), moldura escura fina, LED de ligado e suporte na parede.
+ */
+export function wallScreen(): BufFurniture {
+  const s = wallSheet(5);
+  const b = s.buf;
+  const frame = ramp('#2a2f3a', 0.08);
+  const x = 6;
+  const y = -27;
+  const w = 68;
+  const h = 21;
+  // suportes atrás da moldura
+  b.rect(x + 10, y + h - 1, 3, 2, '#4a505d');
+  b.rect(x + w - 13, y + h - 1, 3, 2, '#4a505d');
+  b.rect(x, y, w, h, frame.base);
+  b.hline(x, x + w - 1, y, frame.hi);
+  b.vline(x, y, y + h - 1, frame.lt);
+  b.vline(x + w - 1, y, y + h - 1, frame.dk);
+  b.hline(x, x + w - 1, y + h - 1, frame.dk);
+  b.rect(x + 2, y + 2, w - 4, h - 4, '#0b1410');
+  // LED de ligado no canto de baixo
+  b.rect(x + w - 4, y + h - 2, 1, 1, '#4ade80');
+  b.outline();
+  wallShadow(b, x - 1, y - 1, w + 2, h + 3);
+  s.rects = { board: rectAt(s, x + 2, y + 2, w - 4, h - 4) };
+  return { base: s };
+}
+
 export function windowItem(): BufFurniture {
   const s = wallSheet(2);
   const b = s.buf;

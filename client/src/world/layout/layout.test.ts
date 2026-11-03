@@ -178,6 +178,31 @@ function hiddenWallItems(area: AreaLayout): string[] {
   return out;
 }
 
+describe('sala de trading (telão largo)', () => {
+  const seeds = Array.from({ length: 60 }, (_, i) => (i * 6151 + 29) >>> 0);
+  it('o telão (68 px) cabe na parede sem encostar em quina, placa ou outro item; a estante sai; os lugares são os mesmos', () => {
+    for (const slot of [0, 1]) {
+      for (const seed of seeds) {
+        const plain = layoutProjectRoom({ id: `/t/${seed}`, slot, seed }, theme);
+        const room = layoutProjectRoom({ id: `/t/${seed}`, slot, seed, trading: true }, theme);
+        expect(room.spots.map((s) => s.kind)).toEqual(plain.spots.map((s) => s.kind));
+        expect(room.furniture.some((f) => f.kind === 'bookshelf')).toBe(false);
+        const left = room.rect.x * TILE;
+        const tv = room.wallItems.find((w) => w.kind === 'whiteboard')!;
+        const span = [tv.cx - 34, tv.cx + 34];
+        expect(span[0], `seed ${seed}`).toBeGreaterThanOrEqual(left + 12);
+        expect(span[1], `seed ${seed}`).toBeLessThanOrEqual(left + 16 * TILE - 12);
+        for (const w of room.wallItems) {
+          if (w === tv || w.on !== 'face') continue;
+          const half = w.kind === 'light_switch' ? 4 : (FURNITURE[w.kind].footprint.w * TILE) / 2 - 3;
+          const overlap = Math.min(span[1], w.cx + half) - Math.max(span[0], w.cx - half);
+          expect(overlap, `${w.kind} seed ${seed} slot ${slot}`).toBeLessThanOrEqual(0);
+        }
+      }
+    }
+  });
+});
+
 describe('variações das salas de projeto', () => {
   const seeds = Array.from({ length: 90 }, (_, i) => (i * 7919 + 13) >>> 0);
 

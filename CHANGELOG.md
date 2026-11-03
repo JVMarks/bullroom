@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Telão largo de parede nas salas de trading.** A lousa vira um telão de 68 px centrado sobre a ilha de mesas: o PL
+  da sala em letras duplas (lê de longe), a série ao lado e uma faixa com o melhor e o pior da sala (robôs pelo PL,
+  corretoras pela distância ao preço médio). A estante de parede sai dessas salas para não cobrir o telão, e as
+  luzinhas da época não passam por cima dele. Salas comuns continuam com a lousa.
 - **Carteiras on-chain (`?source=core`).** Em Mercados › Carteiras, cole endereços públicos de Solana, Ethereum, Base
   ou Bitcoin (a rede sai do formato; para 0x você escolhe Ethereum ou Base). Cada rede vira uma sala ("Carteiras ·
   Solana") e cada carteira um personagem: sentado com posição aberta, circulando zerado, com o resultado realizado

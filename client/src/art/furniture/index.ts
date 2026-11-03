@@ -66,7 +66,7 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
     case 'water_cooler':
       return O.waterCooler();
     case 'whiteboard':
-      return W.whiteboard();
+      return variant === 'screen' ? W.wallScreen() : W.whiteboard();
     case 'window':
       return W.windowItem();
     case 'clock':

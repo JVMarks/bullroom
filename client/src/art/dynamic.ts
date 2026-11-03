@@ -705,6 +705,79 @@ export function drawRoomChart(ctx: Ctx, r: Rect, series: readonly { pnlUsd: numb
   });
 }
 
+/** Uma linha da faixa do telão largo: nome e valor já formatados, com o tom do valor. */
+export interface WallScreenRow {
+  name: string;
+  value: string;
+  tone: 'gain' | 'loss' | 'zero';
+}
+
+const TONE: Readonly<Record<WallScreenRow['tone'], string>> = { gain: '#4ade80', loss: '#f87171', zero: '#a1a9b8' };
+
+/** Série como linha de pixels dentro de (x, y, w, h), com a linha do zero pontilhada. */
+function plotSeries(ctx: Ctx, x: number, y: number, w: number, h: number, values: readonly number[], color: string): void {
+  if (h < 2 || w < 2 || values.length === 0) return;
+  const zeroY = y + zeroRow(values, h);
+  for (let i = 0; i < w; i += 2) fill(ctx, x + i, zeroY, 1, 1, '#2a4034');
+  const cols = chartColumns(values, w, h);
+  let px = -1;
+  let py = -1;
+  cols.forEach((c, i) => {
+    const nx = cols.length === 1 ? x + w - 1 : x + Math.round((i * (w - 1)) / (cols.length - 1));
+    const ny = y + c;
+    if (px >= 0) {
+      fill(ctx, px, py, nx - px, 1, color);
+      fill(ctx, nx, Math.min(py, ny), 1, Math.abs(ny - py) + 1, color);
+    } else fill(ctx, nx, ny, 1, 1, color);
+    px = nx;
+    py = ny;
+  });
+}
+
+/** Texto de pixels em escala inteira (2 = letras de 6x10), para ler de longe. */
+function bigText(ctx: Ctx, text: string, x: number, y: number, color: string, scale: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  pixelText(ctx, text, 0, 0, color);
+  ctx.restore();
+}
+
+/** Corta o texto para caber em `px` de largura (4 px por letra). */
+const fit = (text: string, px: number): string => [...text].slice(0, Math.max(0, Math.floor((px + 1) / 4))).join('');
+
+/**
+ * Bullroom: telão largo de parede da sala de trading (variação C, escolhida pelo diretor em 03/11/2026): o PL da sala
+ * em letras duplas (lê de longe), a série pequena ao lado e, numa faixa embaixo, o melhor e o pior da sala.
+ * `rows` = [melhor, pior] (o pior pode faltar). PL longo demais para letras duplas sai em tamanho normal.
+ */
+export function drawWallScreen(ctx: Ctx, r: Rect, series: readonly { pnlUsd: number }[], label: string, rows: readonly WallScreenRow[]): void {
+  const x = Math.round(r.x);
+  const y = Math.round(r.y);
+  const w = Math.round(r.w);
+  const h = Math.round(r.h);
+  clipTo(x, y, w, h);
+  fill(ctx, x, y, w, h, '#0b1410');
+  const values = series.map((p) => p.pnlUsd);
+  const last = values.length ? values[values.length - 1] : 0;
+  const cents = Math.round(last * 100);
+  const color = cents > 0 ? '#4ade80' : cents < 0 ? '#f87171' : '#a1a9b8';
+  const big = [...label].length * 8 - 2;
+  const scale = big <= w * 0.6 ? 2 : 1;
+  const text = scale === 2 ? label : fit(label, Math.round(w * 0.6));
+  bigText(ctx, text, x + 1, y + 1, color, scale);
+  const after = x + 1 + (scale === 2 ? big : [...text].length * 4 - 1) + 3;
+  plotSeries(ctx, after, y + 1, x + w - 1 - after, 10, values, color);
+  fill(ctx, x + 1, y + 12, w - 2, 1, '#22302a');
+  const half = Math.floor((w - 2) / 2);
+  rows.slice(0, 2).forEach((row, i) => {
+    const name = fit(row.name, half - ([...row.value].length * 4 + 3));
+    const cx = x + 1 + i * (half + 1);
+    pixelText(ctx, name, cx, y + h - 5, '#7d8a84');
+    pixelText(ctx, row.value, cx + [...name].length * 4 + 1, y + h - 5, TONE[row.tone]);
+  });
+}
+
 /** Linha do zero na escala de chartColumns. */
 function zeroRow(values: readonly number[], h: number): number {
   const min = Math.min(0, ...values);
