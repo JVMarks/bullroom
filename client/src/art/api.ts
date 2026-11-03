@@ -103,7 +103,7 @@ export interface Rect {
 }
 
 /** Regiões dinâmicas dentro de um sprite (em px do sprite, relativas ao canto superior esquerdo). */
-export type SpriteRectName = 'screen' | 'board' | 'glass' | 'face' | 'tv' | 'sign' | 'art' | 'glow'
+export type SpriteRectName = 'screen' | 'board' | 'glass' | 'face' | 'tv' | 'sign' | 'art' | 'glow' | 'leds'
   /**
    * (Aditivo) 2º monitor/notebook da `desk`, quando existe. O sprite já traz um conteúdo fixo
    * escurecido (planilha/editor/painel); o mundo PODE desenhar por cima (ex.: drawScreen 'off'
@@ -145,6 +145,7 @@ export type FurnitureKind =
   | 'office_chair' // 1x1 assento. Encosto ao sul (personagem senta virado para cima, de costas). front = encosto.
   | 'bookshelf' // 2x1 encostada na parede norte. Livros coloridos.
   | 'filing_cabinet' // 1x1 arquivo de gavetas.
+  | 'server_rack' // 1x1 rack de servidor alto (Bullroom: sala de máquinas). rects.leds = coluna dos LEDs (o render pinta pelo estado da fonte).
   | 'printer' // 1x1 impressora sobre móvel baixo.
   | 'trash_bin' // 1x1 lixeira pequena (pode ser bem menor que o tile).
   | 'plant_small' // 1x1 vaso pequeno. variants: 'fern' | 'succulent' | 'flower'
@@ -223,6 +224,7 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   office_chair: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true, variants: ['black', 'blue', 'red', 'green', 'gray'] },
   bookshelf: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
   filing_cabinet: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  server_rack: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   printer: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   trash_bin: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   plant_small: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true, variants: ['fern', 'succulent', 'flower'] },

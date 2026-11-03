@@ -12,6 +12,18 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Agenda e radar (`?source=core`).** Painel "Agenda" (Configurações › Mercados): os próximos 14 dias com cor de
+  impacto e hora no seu fuso (FOMC e CPI com as datas oficiais do Fed e do BLS, mais os seus eventos) e o radar de
+  manchetes dos feeds RSS que você escolher, com o que é novo desde a última olhada e a sala que cada manchete cita.
+  Evento de alto impacto a menos de 30 min acende o alarme da sala do par ("FOMC às 16:00"). Manchete é pista, não
+  fato: só título, fonte e link, sem resumo nem previsão. Eventos e feeds se editam em Mercados › Agenda e radar.
+- **Sala de máquinas (`?source=core`).** Uma sala com 12 racks de servidor: cada corretora ou fonte on-chain acende o
+  LED do seu rack (verde ok, âmbar recuando ou perto do limite, vermelho fora) e o telão mostra a CPU do núcleo. O
+  clique na sala abre os números: CPU e memória do núcleo, memória do computador e, por fonte, a latência e o uso do
+  limite de pedidos por minuto. Tudo medido no computador.
+- **Bolhas.** Painel "Bolhas" (Configurações › Mercados): uma bolha por robô (simulado) ou carteira on-chain (ao vivo),
+  cor pelo PL e tamanho pelo capital; com capitais iguais, pelo tamanho do PL. Filtro por sala; o clique abre o cartão.
+  Só redesenha quando um número muda.
 - **Telão largo de parede nas salas de trading.** A lousa vira um telão de 68 px centrado sobre a ilha de mesas: o PL
   da sala em letras duplas (lê de longe), a série ao lado e uma faixa com o melhor e o pior da sala (robôs pelo PL,
   corretoras pela distância ao preço médio). A estante de parede sai dessas salas para não cobrir o telão, e as

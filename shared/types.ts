@@ -217,6 +217,16 @@ export interface RoomInfo {
   effect?: RoomEffect;
   /** Bullroom: PL da sala (soma dos robôs, ejetados inclusive) e a série dele. Ausente = sala comum. */
   trading?: RoomTrading;
+  /** Bullroom: sala de máquinas do núcleo do OpenSpread (um rack por fonte e a saúde do núcleo). Ausente = sala comum. */
+  machines?: RoomMachines;
+}
+
+/** Sala de máquinas: CPU e memória do núcleo, a série da CPU (no telão) e um rack por fonte, na ordem dos racks. */
+export interface RoomMachines {
+  cpuPct: number;
+  rssMb: number;
+  series: Array<{ at: number; pnlUsd: number }>;
+  racks: Array<{ id: string; name: string; level: 'ok' | 'warn' | 'down' }>;
 }
 
 /**

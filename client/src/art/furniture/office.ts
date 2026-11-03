@@ -400,6 +400,35 @@ export function binderShelf(seed: number): BufFurniture {
   return { base: s };
 }
 
+/**
+ * Bullroom: rack de servidor da sala de máquinas. Gabinete escuro e alto com as gavetas dos servidores e uma coluna de
+ * três LEDs à direita (rects.leds), que o render acende pelo estado da fonte (verde, âmbar ou vermelho).
+ */
+export function serverRack(): BufFurniture {
+  const s = floorSheet(1, 1, 22);
+  const b = s.buf;
+  const w = ramp('#2f3542', 0.07);
+  topFace(b, 0, -21, 16, 3, w);
+  b.rect(0, -18, 16, 34, w.dk);
+  b.rect(1, -17, 14, 31, '#171b22');
+  b.vline(0, -18, 15, w.lt);
+  b.vline(15, -18, 15, w.dd);
+  // gavetas dos servidores, com grade de ventilação
+  for (let y = -16; y <= 11; y += 4) {
+    b.rect(2, y, 9, 3, '#272c37');
+    b.hline(2, 10, y, '#3a4150');
+    for (let x = 3; x < 10; x += 2) b.set(x, y + 1, '#12151b');
+  }
+  // trilho dos LEDs (apagados; o render acende)
+  b.rect(11, -16, 3, 27, '#10131a');
+  for (const y of [-14, -6, 2]) b.rect(12, y, 2, 2, '#2a303b');
+  // pés
+  b.rect(1, 15, 2, 1, '#11141a');
+  b.rect(13, 15, 2, 1, '#11141a');
+  s.rects = { leds: rectAt(s, 12, -14, 2, 18) };
+  return { base: s };
+}
+
 export function filingCabinet(): BufFurniture {
   const s = floorSheet(1, 1, 8);
   const b = s.buf;

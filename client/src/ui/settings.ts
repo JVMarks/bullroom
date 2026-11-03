@@ -223,6 +223,48 @@ export class SettingsPopover implements UiComponent {
           },
         }),
       ),
+      h(
+        'div',
+        { class: 'ui-set' },
+        h(
+          'div',
+          { class: 'ui-set__text' },
+          h('span', { class: 'ui-set__label', text: tr('Bolhas') }),
+          h('span', { class: 'ui-set__hint', text: tr('Robôs ou carteiras como bolhas: tamanho = capital, cor = PL.') }),
+        ),
+        h('button', {
+          class: 'ui-btn',
+          type: 'button',
+          text: tr('Abrir'),
+          on: {
+            click: () => {
+              this.hide();
+              ctx.toggleBubbles(true);
+            },
+          },
+        }),
+      ),
+      h(
+        'div',
+        { class: 'ui-set' },
+        h(
+          'div',
+          { class: 'ui-set__text' },
+          h('span', { class: 'ui-set__label', text: tr('Agenda e radar') }),
+          h('span', { class: 'ui-set__hint', text: tr('Eventos com impacto (FOMC, CPI e os seus) e manchetes novas dos feeds que você escolheu.') }),
+        ),
+        h('button', {
+          class: 'ui-btn',
+          type: 'button',
+          text: tr('Abrir'),
+          on: {
+            click: () => {
+              this.hide();
+              ctx.toggleAgenda(true);
+            },
+          },
+        }),
+      ),
     );
 
     this.logoutBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Sair'), on: { click: () => void this.logout() } }) as HTMLButtonElement;

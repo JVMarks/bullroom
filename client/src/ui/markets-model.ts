@@ -143,7 +143,19 @@ export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
     [`size:${c.transfer?.sizeUsd ?? 1000}`, ...Object.entries(c.transfer?.withdrawFees ?? {}).flatMap(([ex, m]) => Object.entries(m).map(([a, v]) => `${ex}:${a}:${v}`))].sort();
   const wallets = (c: CoreConfig) => (c.wallets ?? []).map((w) => `${w.chain}:${w.address}`);
   const discovery = (c: CoreConfig) => (c.discovery ? [`per:${c.discovery.perToken}`, ...c.discovery.tokens.map((t) => `${t.chain}:${t.address}`)] : []);
-  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b)) && eq(fees(a), fees(b)) && eq(wallets(a), wallets(b)) && eq(discovery(a), discovery(b));
+  const events = (c: CoreConfig) => (c.events ?? []).map((e) => [e.title, e.at, e.impact, ...(e.pairs ?? [])].join('|'));
+  const radar = (c: CoreConfig) => (c.radar ? [...c.radar.feeds, '#', ...c.radar.keywords] : []);
+  return (
+    eq(a.exchanges, b.exchanges) &&
+    eq(a.pairs, b.pairs) &&
+    a.pollMs === b.pollMs &&
+    eq(alerts(a), alerts(b)) &&
+    eq(fees(a), fees(b)) &&
+    eq(wallets(a), wallets(b)) &&
+    eq(discovery(a), discovery(b)) &&
+    eq(events(a), events(b)) &&
+    eq(radar(a), radar(b))
+  );
 }
 
 /**
@@ -156,6 +168,19 @@ export function walletKind(input: string): 'solana' | 'evm' | 'bitcoin' | null {
   if (/^(bc1[02-9ac-hj-np-z]{11,71}|BC1[02-9AC-HJ-NP-Z]{11,71}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(s)) return 'bitcoin';
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s)) return 'solana';
   return null;
+}
+
+/**
+ * `datetime-local` ("2026-11-20T14:00") no fuso do navegador → ISO com o fuso explícito que o núcleo exige
+ * ("2026-11-20T14:00:00-03:00"). null se a data não for válida. Puro (o fuso vem de `offsetMin`, como em getTimezoneOffset).
+ */
+export function localToIso(value: string, offsetMin: number): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const off = -offsetMin;
+  const sign = off >= 0 ? '+' : '-';
+  const abs = Math.abs(off);
+  const iso = value + ':00' + sign + String(Math.floor(abs / 60)).padStart(2, '0') + ':' + String(abs % 60).padStart(2, '0');
+  return Number.isFinite(Date.parse(iso)) ? iso : null;
 }
 
 /** Endereço como o núcleo guarda (EVM em minúsculas, bech32 em minúsculas). */

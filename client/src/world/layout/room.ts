@@ -22,6 +22,8 @@ export interface RoomInput {
   seed: number;
   /** Bullroom: sala de trading. A lousa vira o telão largo (centrado na ilha) e a estante de parede sai. */
   trading?: boolean;
+  /** Bullroom: sala de máquinas. Telão como na de trading e racks de servidor no lugar da ilha de mesas. */
+  machines?: boolean;
 }
 
 const PLANTS_TALL = ['palm', 'ficus', 'monstera', 'bonsai'] as const;
@@ -125,7 +127,7 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
   const signCx = north ? 8 : 10.5;
   area.signId = wallItem('sign', signCx, undefined, { order: 0.95 });
   // Bullroom: o telão largo (68 px) fica centrado na ilha de mesas; a lousa comum continua onde sempre esteve
-  const screen = !!room.trading;
+  const screen = !!room.trading || !!room.machines;
   if (north) {
     wallItem('whiteboard', screen ? 4 : 4.5, undefined, { order: 0.6 });
     wallItem('clock', 10, undefined, { order: 0.7 });
@@ -143,14 +145,22 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
   }
   spot('whiteboard', north ? 4 : 2, 2, 'up', { dx: 8, dy: 2 });
 
+  /** Dois racks lado a lado; devolve o id do primeiro (o lugar da cadeira aponta para ele). */
+  function rackPair(lx: number, ly: number, i: number, order: number): string {
+    const id = furn('server_rack', lx, ly, undefined, { order: order + i * 0.05 });
+    furn('server_rack', lx + 1, ly, undefined, { order: order + i * 0.05 + 0.01 });
+    return id;
+  }
+
   // ---- ilha de trabalho 3x2 face a face (colunas 2–7, linhas 4–7)
   const deskV = theme.deskVariant;
   const chairV = theme.chairVariant;
   const ranks = [2, 0, 4];
   for (let i = 0; i < 3; i++) {
     const lx = 2 + i * 2;
-    const back = furn('desk_back', lx, 5, deskV, { order: 0.35 + i * 0.05, seat: `N${i}` });
-    const front = furn('desk', lx, 6, deskV, { order: 0.4 + i * 0.05, seat: `S${i}` });
+    // sala de máquinas: dois racks onde ficaria cada mesa (12 ao todo); as cadeiras e os lugares continuam os mesmos
+    const back = room.machines ? rackPair(lx, 5, i, 0.35) : furn('desk_back', lx, 5, deskV, { order: 0.35 + i * 0.05, seat: `N${i}` });
+    const front = room.machines ? rackPair(lx, 6, i, 0.4) : furn('desk', lx, 6, deskV, { order: 0.4 + i * 0.05, seat: `S${i}` });
     seat('desk', 'office_chair_front', lx, 4, 'down', chairV, { dx: TILE / 2, deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
     seat('desk', 'office_chair', lx, 7, 'up', chairV, { dx: TILE / 2, deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
   }

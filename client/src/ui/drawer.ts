@@ -5,6 +5,9 @@ import { BotCard } from './bot-card';
 import { MarketsView } from './markets';
 import { RoomWindows, SpreadsView } from './spreads';
 import { RankingView, WalletCard } from './wallet-card';
+import { BubblesView } from './bubbles';
+import { AgendaView } from './agenda';
+import { RoomMachinesView } from './machines';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
 import { roomTheme } from '../art';
 import { createAvatarPlaceholder, updateAvatar } from './avatar';
@@ -840,6 +843,8 @@ class RoomView {
   /** Bullroom ao vivo: o melhor spread do par em 5 min, 1 h e 24 h. */
   private windows = new RoomWindows();
   private windowsSec: ReturnType<typeof section>;
+  private machines = new RoomMachinesView();
+  private machinesSec: ReturnType<typeof section>;
 
   constructor(
     private ctx: UiContext,
@@ -893,6 +898,7 @@ class RoomView {
     this.tasks = new KeyedList(tasksList, { key: (t) => t.key, create: createTaskItem, update: (li, t) => updateTaskItem(li, t.task, t.owner) });
 
     this.windowsSec = section(tr('Spread em janelas'), this.windows.boxes);
+    this.machinesSec = section(tr('Máquinas'), this.machines.el);
     const feedList = h('ol', { class: 'ui-timeline' });
     this.feedSec = section(tr('Atividade recente'), feedList);
     this.feed = new KeyedList<FeedItem>(feedList, { key: (f) => f.id, create: createTimelineItem, update: (li, f) => updateTimelineItem(li, f.activity, ctx.now(), f.agentName) });
@@ -910,6 +916,7 @@ class RoomView {
       h('div', { class: 'ui-status' }, accsEl, h('span', { class: 'ui-status__actions' }, this.newBtn, centerBtn)),
       this.newMsg,
       this.windowsSec.el,
+      this.machinesSec.el,
       this.agentsSec.el,
       this.tasksSec.el,
       this.feedSec.el,
@@ -960,6 +967,9 @@ class RoomView {
     setHidden(this.newBtn, !this.pty.enabled);
 
     setHidden(this.windowsSec.el, !this.windows.render(this.ctx, r.id));
+    // sala de máquinas: só os números; sem agentes, tarefas nem atividade (ela não tem gente)
+    const isMachines = this.machines.render(this.ctx, r.id);
+    setHidden(this.machinesSec.el, !isMachines);
 
     const snap = this.ctx.store.snapshot;
     const agents = (snap?.agents ?? []).filter((a) => a.roomId === r.id);
@@ -978,13 +988,14 @@ class RoomView {
     const feed = this.ctx.store.feed.filter((f) => f.roomId === r.id).slice(-ROOM_FEED_LIMIT).reverse();
     setHidden(this.feedSec.el, feed.length === 0);
     this.feed.sync(feed);
+    if (isMachines) for (const el of [this.agentsSec.el, this.tasksSec.el, this.feedSec.el]) setHidden(el, true);
   }
 }
 
 // ---------------------------------------------------------------- gaveta
 
 /** Painéis do Bullroom na gaveta (fora da seleção do escritório). */
-export type DrawerPanel = 'markets' | 'spreads' | 'ranking';
+export type DrawerPanel = 'markets' | 'spreads' | 'ranking' | 'bubbles' | 'agenda';
 
 export class Drawer implements UiComponent {
   readonly el: HTMLElement;
@@ -994,6 +1005,8 @@ export class Drawer implements UiComponent {
   private marketsView: MarketsView;
   private spreadsView: SpreadsView;
   private rankingView: RankingView;
+  private bubblesView: BubblesView;
+  private agendaView: AgendaView;
   private mode: 'agent' | 'room' | DrawerPanel | null = null;
   /** Painel do Bullroom pedido ("Mercados" ou "Spreads"). Uma seleção no escritório tem prioridade e fecha o painel. */
   private panelWanted: DrawerPanel | null = null;
@@ -1012,9 +1025,11 @@ export class Drawer implements UiComponent {
     this.marketsView = new MarketsView(ctx);
     this.spreadsView = new SpreadsView(ctx);
     this.rankingView = new RankingView(ctx);
+    this.bubblesView = new BubblesView(ctx);
+    this.agendaView = new AgendaView(ctx);
     this.heading = h('span', { class: 'ui-drawer__kind' });
     const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => {
-      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking') this.togglePanel(this.mode, false);
+      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking' || this.mode === 'bubbles' || this.mode === 'agenda') this.togglePanel(this.mode, false);
       else ctx.select(null);
     });
     this.body = h('div', { class: 'ui-drawer__body' });
@@ -1047,6 +1062,8 @@ export class Drawer implements UiComponent {
       if (this.ctx.selection()) this.ctx.select(null);
       if (kind === 'markets') this.marketsView.open();
       else if (kind === 'ranking') this.rankingView.open();
+      else if (kind === 'bubbles') this.bubblesView.open();
+      else if (kind === 'agenda') this.agendaView.open();
       else this.spreadsView.open();
     }
     this.ctx.invalidate();
@@ -1069,7 +1086,7 @@ export class Drawer implements UiComponent {
       // Gaveta fechada ou fora do agente: o editor fecha, e ao reabrir começa do estado atual do agente.
       if (this.mode === 'agent') this.agentView.character.close();
       this.mode = mode;
-      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : []));
+      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : mode === 'bubbles' ? [this.bubblesView.el] : mode === 'agenda' ? [this.agendaView.el] : []));
       this.body.scrollTop = 0;
       this.el.classList.toggle('is-open', mode !== null);
       setAttr(this.el, 'aria-hidden', mode ? 'false' : 'true');
@@ -1095,6 +1112,12 @@ export class Drawer implements UiComponent {
     } else if (mode === 'ranking') {
       setText(this.heading, tr('Ranking'));
       this.rankingView.render();
+    } else if (mode === 'bubbles') {
+      setText(this.heading, tr('Bolhas'));
+      this.bubblesView.render();
+    } else if (mode === 'agenda') {
+      setText(this.heading, tr('Agenda'));
+      this.agendaView.render();
     }
   }
 }

@@ -73,6 +73,10 @@ export interface UiContext {
   toggleSpreads(open?: boolean): void;
   /** Abre/fecha o painel "Ranking" (melhores e piores carteiras on-chain) na gaveta da direita. */
   toggleRanking(open?: boolean): void;
+  /** Abre/fecha o painel "Bolhas" (bubble map dos robôs ou carteiras) na gaveta da direita. */
+  toggleBubbles(open?: boolean): void;
+  /** Abre/fecha o painel "Agenda" (calendário com impacto e radar de manchetes) na gaveta da direita. */
+  toggleAgenda(open?: boolean): void;
   /** Abre/fecha a janela do Habblaud World (o botão da barra do topo; ui/world/world-dialog.ts). */
   toggleWorld(): void;
   /** Abre o campo de renomear a sala perto do ponto (px da janela); botão direito na sala (ui/roomrename.ts). */

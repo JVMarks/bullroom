@@ -171,6 +171,14 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       drawer.togglePanel('ranking', open);
       applyLayout();
     },
+    toggleBubbles(open) {
+      drawer.togglePanel('bubbles', open);
+      applyLayout();
+    },
+    toggleAgenda(open) {
+      drawer.togglePanel('agenda', open);
+      applyLayout();
+    },
     toggleWorld: () => worldDialog.toggle(topbar.worldBtn),
     openAbout: () => settings.showAbout(topbar.settingsBtn),
     toggleTimelapse() {
@@ -424,6 +432,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
         ctx.toggleMarkets(false);
         ctx.toggleSpreads(false);
         ctx.toggleRanking(false);
+        ctx.toggleBubbles(false);
+        ctx.toggleAgenda(false);
         e.preventDefault();
       }
       return;

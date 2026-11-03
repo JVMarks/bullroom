@@ -203,6 +203,22 @@ describe('sala de trading (telão largo)', () => {
   });
 });
 
+describe('sala de máquinas', () => {
+  it('12 racks no lugar das mesas, sem mesas e sem estante; os mesmos lugares; telão no lugar da lousa', () => {
+    for (const slot of [0, 1]) {
+      for (const seed of [7, 1234, 99991]) {
+        const plain = layoutProjectRoom({ id: `/m/${seed}`, slot, seed }, theme);
+        const room = layoutProjectRoom({ id: `/m/${seed}`, slot, seed, machines: true }, theme);
+        expect(room.furniture.filter((f) => f.kind === 'server_rack')).toHaveLength(12);
+        expect(room.furniture.some((f) => f.kind === 'desk' || f.kind === 'desk_back' || f.kind === 'bookshelf')).toBe(false);
+        expect(room.spots.map((s) => s.kind)).toEqual(plain.spots.map((s) => s.kind));
+        const racks = new Set(room.furniture.filter((f) => f.kind === 'server_rack').map((f) => f.id));
+        for (const s of room.spots.filter((x) => x.deskId)) expect(racks.has(s.deskId!)).toBe(true);
+      }
+    }
+  });
+});
+
 describe('variações das salas de projeto', () => {
   const seeds = Array.from({ length: 90 }, (_, i) => (i * 7919 + 13) >>> 0);
 

@@ -45,6 +45,8 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return O.bookshelf(seed);
     case 'filing_cabinet':
       return O.filingCabinet();
+    case 'server_rack':
+      return O.serverRack();
     case 'printer':
       return O.printer();
     case 'trash_bin':

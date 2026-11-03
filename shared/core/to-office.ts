@@ -4,7 +4,8 @@ import type { AgentInfo, FeedItem, Notice, OfficeSnapshot, RoomInfo } from '../t
 import { hash32 } from '../hash';
 import { intlLocale, tr } from '../i18n';
 import type { ValueUnit } from '../trading/types';
-import type { CoreState, SpreadOpportunity, WalletChain, WalletState } from './types';
+import type { AgendaEvent, CoreState, MachineSource, SpreadOpportunity, WalletChain, WalletState } from './types';
+import type { RoomEffect } from '../types';
 
 /** Líquido que vale para a sala: com o saque quando o núcleo conseguiu estimar (mesma regra de core/src/transfer.ts). */
 export function effectiveNet(best: SpreadOpportunity): number {
@@ -58,6 +59,39 @@ const CHAIN_ORDER: readonly WalletChain[] = ['solana', 'ethereum', 'base', 'bitc
 const QUOTE_UNIT: Readonly<Record<string, ValueUnit>> = { SOL: 'sol', ETH: 'eth', BTC: 'btc', USD: 'usd' };
 const NATIVE: Readonly<Record<WalletChain, string>> = { solana: 'SOL', ethereum: 'ETH', base: 'ETH', bitcoin: 'BTC' };
 
+/** Alarme da sala: de meia hora antes até 10 min depois de um evento de alto impacto. */
+export const ALARM_BEFORE_MS = 30 * 60_000;
+export const ALARM_AFTER_MS = 10 * 60_000;
+
+/**
+ * Alarme da sala do par: o evento de alto impacto mais próximo que vale para o par (sem pares = todas as salas) e
+ * está na janela. Faixa fixa ("FOMC às 16:00"), para a sala não mudar a cada minuto. Puro.
+ */
+export function agendaAlarm(events: readonly AgendaEvent[], pair: string, now: number, clock: (at: number) => string): RoomEffect | undefined {
+  const e = events
+    .filter((x) => x.impact === 'high' && (!x.pairs.length || x.pairs.includes(pair)) && now >= x.at - ALARM_BEFORE_MS && now < x.at + ALARM_AFTER_MS)
+    .sort((a, b) => a.at - b.at || a.id.localeCompare(b.id))[0];
+  return e ? { kind: 'alarm', text: tr('{0} às {1}', [e.title, clock(e.at)]), at: e.at - ALARM_BEFORE_MS, until: e.at + ALARM_AFTER_MS } : undefined;
+}
+
+/** Id da sala de máquinas. */
+export const MACHINES_ROOM_ID = 'core:machines';
+
+/** LED do rack: fora, recuando ou quase no limite (80%), ou ok. Mesma regra de core/src/machine.ts (sourceLevel). */
+export function sourceLevel(s: MachineSource, now: number): 'ok' | 'warn' | 'down' {
+  if (s.backoffUntil && s.backoffUntil > now) return 'warn';
+  if (!s.ok) return 'down';
+  if (s.limitPerMin && s.perMin >= s.limitPerMin * 0.8) return 'warn';
+  return 'ok';
+}
+
+/** Nome do rack: a corretora pelo nome; a fonte on-chain pela rede. */
+export function sourceName(s: MachineSource): string {
+  if (s.kind === 'exchange') return exchangeName(s.id);
+  if (s.chain) return CHAIN_NAMES[s.chain];
+  return s.id;
+}
+
 /** `7xKX…9fQ`: endereço encurtado (nunca nome de pessoa). */
 export const shortAddress = (a: string): string => (a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
 
@@ -78,6 +112,8 @@ export function walletBadge(w: WalletState): { value: number; unit: ValueUnit } 
 
 export class CoreOffice {
   private series = new Map<string, Array<{ at: number; pnlUsd: number }>>();
+  /** CPU do núcleo ao longo do tempo (telão da sala de máquinas). */
+  private cpu: Array<{ at: number; pnlUsd: number }> = [];
   private total: Array<{ at: number; pnlUsd: number }> = [];
   /** Rev próprio, sempre crescente: o do núcleo volta a 1 quando ele reinicia, e o store descartaria o snapshot. */
   private rev = 0;
@@ -102,7 +138,9 @@ export class CoreOffice {
       if (!series.length || series[series.length - 1].at !== state.at) series.push({ at: state.at, pnlUsd: net });
       if (series.length > SERIES_MAX) series.splice(0, series.length - SERIES_MAX);
       this.series.set(id, series);
-      rooms.push({ id, name: p.pair, path: `openspread://${p.pair}`, slot, seed: hash32(id), createdAt: this.startedAt, trading: { pnlUsd: net, unit: 'pct', series: series.map((x) => ({ ...x })) } });
+      const clock = (at: number) => new Intl.DateTimeFormat(intlLocale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(at);
+      const effect = agendaAlarm(state.agenda?.events ?? [], p.pair, state.at, clock);
+      rooms.push({ id, name: p.pair, path: `openspread://${p.pair}`, slot, seed: hash32(id), createdAt: this.startedAt, trading: { pnlUsd: net, unit: 'pct', series: series.map((x) => ({ ...x })) }, ...(effect ? { effect } : {}) });
       // distância de cada corretora para o preço médio da sala, em pontos-base
       const mids = p.quotes.map((q) => (q.bid + q.ask) / 2);
       const avg = mids.reduce((s, m) => s + m, 0) / (mids.length || 1);
@@ -164,6 +202,21 @@ export class CoreOffice {
           wallet: w,
         });
       }
+    }
+    // Sala de máquinas: um rack por fonte (corretoras, depois redes on-chain); vazia de gente, só os LEDs mudam
+    const m = state.machine;
+    if (m) {
+      if (!this.cpu.length || this.cpu[this.cpu.length - 1].at !== m.at) this.cpu.push({ at: m.at, pnlUsd: m.cpuPct });
+      if (this.cpu.length > SERIES_MAX) this.cpu.splice(0, this.cpu.length - SERIES_MAX);
+      rooms.push({
+        id: MACHINES_ROOM_ID,
+        name: tr('Sala de máquinas'),
+        path: 'openspread://machines',
+        slot: rooms.length,
+        seed: hash32(MACHINES_ROOM_ID),
+        createdAt: this.startedAt,
+        machines: { cpuPct: m.cpuPct, rssMb: m.rssMb, series: this.cpu.map((x) => ({ ...x })), racks: m.sources.map((s) => ({ id: s.id, name: sourceName(s), level: sourceLevel(s, state.at) })) },
+      });
     }
     const top = bestNet ?? 0;
     if (!this.total.length || this.total[this.total.length - 1].at !== state.at) this.total.push({ at: state.at, pnlUsd: top });

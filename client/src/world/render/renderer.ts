@@ -632,18 +632,28 @@ export class Renderer {
         return;
       }
       case 'whiteboard': {
-        // Bullroom: sala de trading troca a lousa pelo telão largo (PL da sala, série e placar); sala comum fica igual
+        // Bullroom: sala de trading troca a lousa pelo telão largo (PL da sala, série e placar); a sala de máquinas
+        // mostra ali a CPU do núcleo; sala comum fica igual
         const trading = vis.room?.info.trading;
-        const s = wallSprites(this.art, 'whiteboard', trading ? 'screen' : w.variant, 0, w.seed);
+        const machines = vis.room?.info.machines;
+        const s = wallSprites(this.art, 'whiteboard', trading || machines ? 'screen' : w.variant, 0, w.seed);
         if (!s) return;
         const o = wallItemOrigin(w, s.base);
-        if (trading) o.x += wallScreenShift(o.x, s.base.canvas.width, vis.px);
+        if (trading || machines) o.x += wallScreenShift(o.x, s.base.canvas.width, vis.px);
         ctx.drawImage(s.base.canvas, o.x, o.y + rise);
         const r = s.base.rects?.board;
         const board = r && { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h };
         if (board && trading) {
           const label = formatValue(trading.pnlUsd, trading.unit, intlLocale()).replace('$', '').replace('%', '');
           this.safe(() => this.art.drawWallScreen(ctx, board, trading.series, label, this.roomScoreboard(vis.id)));
+        } else if (board && machines) {
+          const up = machines.racks.filter((r) => r.level === 'ok').length;
+          const fmt = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 1 });
+          const rows = [
+            { name: 'mem', value: `${machines.rssMb}mb`, tone: 'zero' as const },
+            { name: 'ok', value: `${up}/${machines.racks.length}`, tone: up === machines.racks.length ? ('gain' as const) : ('loss' as const) },
+          ];
+          this.safe(() => this.art.drawWallScreen(ctx, board, machines.series, `${fmt.format(machines.cpuPct)}`, rows));
         } else if (board) this.safe(() => this.art.drawBoard(ctx, board, vis.room?.board ?? [], now));
         return;
       }
@@ -803,6 +813,8 @@ export class Renderer {
         const r = s.rects.screen;
         const mode = this.deskScreen(f, area);
         this.safe(() => this.art.drawScreen(ctx, { x: dx + r.x, y: dy + r.y, w: r.w, h: r.h }, mode, now, f.seed));
+      } else if (f.kind === 'server_rack' && s.rects?.leds) {
+        this.drawRackLeds(f, area, { x: dx + s.rects.leds.x, y: dy + s.rects.leds.y });
       } else if (f.kind === 'coffee_machine' && state === 1) {
         this.drawSteam(f.ax, dy + 2, now, f.seed);
       } else if (f.kind === 'arcade' && s.rects?.screen) {
@@ -813,6 +825,22 @@ export class Renderer {
       }
     }
     if (scaled) ctx.restore();
+  }
+
+  /**
+   * LEDs do rack pela fonte daquele rack (na ordem dos racks da sala): verde ok, âmbar recuando ou perto do limite,
+   * vermelho fora. Rack sem fonte fica apagado. Sem piscar (princípio da calma).
+   */
+  private drawRackLeds(f: FurnVis, area: AreaVis, at: { x: number; y: number }): void {
+    const racks = area.room?.info.machines?.racks;
+    if (!racks) return;
+    const idx = area.layout.furniture.filter((x) => x.kind === 'server_rack').findIndex((x) => x.id === f.id);
+    const rack = racks[idx];
+    if (!rack) return;
+    const color = rack.level === 'ok' ? '#4ade80' : rack.level === 'warn' ? '#fbbf24' : '#f87171';
+    const { ctx } = this;
+    ctx.fillStyle = color;
+    for (const dy of [0, 8, 16]) ctx.fillRect(at.x, at.y + dy, 2, 2);
   }
 
   /** Tela do monitor: segue a atividade de quem senta ali. */
@@ -1242,7 +1270,7 @@ export class Renderer {
 
   /** Onde está o telão largo da sala (px do mundo), para as luzinhas da época não passarem por cima dele. */
   private wallScreenSpans(vis: AreaVis): Array<{ x0: number; x1: number }> {
-    if (!vis.room?.info.trading) return [];
+    if (!vis.room?.info.trading && !vis.room?.info.machines) return [];
     const out: Array<{ x0: number; x1: number }> = [];
     for (const w of vis.wallItems) {
       if (w.kind !== 'whiteboard') continue;

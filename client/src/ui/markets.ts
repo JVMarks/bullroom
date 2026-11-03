@@ -10,7 +10,7 @@ import { coreConfigApi, type CoreConfigApi, type CoreFailure } from '../net/core
 import type { UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, normalizeWallet, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine, walletKind } from './markets-model';
+import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, localToIso, normalizeWallet, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine, walletKind } from './markets-model';
 
 type Phase = 'demo' | 'loading' | 'offline' | 'ready';
 type Tone = 'ok' | 'warn' | 'error';
@@ -53,6 +53,12 @@ export class MarketsView {
   private tokenInput: HTMLInputElement;
   private tokenChain: HTMLSelectElement;
   private perToken: HTMLInputElement;
+  private feedsBox: HTMLElement;
+  private feedInput: HTMLInputElement;
+  private eventsBox: HTMLElement;
+  private eventTitle: HTMLInputElement;
+  private eventAt: HTMLInputElement;
+  private eventImpact: HTMLSelectElement;
   private noteEl: HTMLElement;
   private checkBtn: HTMLButtonElement;
   private saveBtn: HTMLButtonElement;
@@ -108,6 +114,20 @@ export class MarketsView {
       tokenForm,
       h('label', { class: 'ui-mk__hint ui-mk__inline' }, tr('Carteiras por token'), this.perToken),
     );
+    this.feedsBox = h('div', { class: 'ui-mk__chips', role: 'list' });
+    this.feedInput = h('input', { class: 'ui-mk__input', type: 'url', attrs: { 'aria-label': tr('Endereço do feed RSS'), placeholder: tr('+ Endereço de um feed RSS ou Atom (https://…)'), autocomplete: 'off', spellcheck: 'false' } });
+    const feedForm = h('form', { class: 'ui-mk__add', on: { submit: (e) => (e.preventDefault(), this.addFeed()) } }, this.feedInput, h('button', { class: 'ui-btn', type: 'submit', text: tr('Adicionar') }));
+    this.eventsBox = h('div', { class: 'ui-mk__events' });
+    this.eventTitle = h('input', { class: 'ui-mk__input', type: 'text', attrs: { 'aria-label': tr('Nome do evento'), placeholder: tr('+ Evento (ex.: desbloqueio de token)'), maxlength: 80 } });
+    this.eventAt = h('input', { class: 'ui-mk__input ui-mk__select', type: 'datetime-local', attrs: { 'aria-label': tr('Data e hora do evento') } });
+    this.eventImpact = h(
+      'select',
+      { class: 'ui-mk__input ui-mk__select', attrs: { 'aria-label': tr('Impacto do evento') } },
+      h('option', { text: tr('alto'), attrs: { value: 'high' } }),
+      h('option', { text: tr('médio'), attrs: { value: 'medium' } }),
+      h('option', { text: tr('baixo'), attrs: { value: 'low' } }),
+    );
+    const eventForm = h('form', { class: 'ui-mk__add ui-mk__add--wrap', on: { submit: (e) => (e.preventDefault(), this.addEvent()) } }, this.eventTitle, this.eventAt, this.eventImpact, h('button', { class: 'ui-btn', type: 'submit', text: tr('Adicionar') }));
     this.noteEl = h('div', { class: 'ui-mk__note', role: 'status', attrs: { 'aria-live': 'polite' } });
     this.checkBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Conferir'), on: { click: () => void this.runCheck() } });
     this.saveBtn = h('button', { class: 'ui-btn ui-btn--primary', type: 'button', text: tr('Salvar e aplicar'), on: { click: () => void this.save() } });
@@ -129,6 +149,12 @@ export class MarketsView {
       walletForm,
       h('p', { class: 'ui-mk__hint', text: tr('Só o endereço público, nunca nome. Cada rede vira uma sala; cada carteira, um personagem. A Base precisa da chave grátis do Blockscout no seu computador.') }),
       this.discoveryEl,
+      h('h3', { class: 'ui-mk__label', text: tr('Agenda e radar') }),
+      h('p', { class: 'ui-mk__hint', text: tr('FOMC e CPI já vêm com as datas oficiais. Aqui entram os seus eventos e os feeds do radar (só manchete e link).') }),
+      this.eventsBox,
+      eventForm,
+      this.feedsBox,
+      feedForm,
     );
     const actions = h('div', { class: 'ui-mk__actions' }, this.checkBtn, this.saveBtn);
     this.el = h(
@@ -299,6 +325,7 @@ export class MarketsView {
       this.paintSuggestions();
       this.paintTransfer();
       this.paintWallets();
+      this.paintAgenda();
       const changed = !sameConfig(this.draft!, this.info!.config);
       this.checkBtn.disabled = this.busy !== null;
       this.saveBtn.disabled = this.busy !== null || !changed;
@@ -400,6 +427,104 @@ export class MarketsView {
     );
     if (document.activeElement !== this.perToken) this.perToken.value = String(disc?.perToken ?? 5);
     this.perToken.disabled = !disc?.tokens.length;
+  }
+
+  private addFeed(): void {
+    if (!this.draft || !this.info) return;
+    const raw = this.feedInput.value.trim();
+    let url: string;
+    try {
+      const u = new URL(raw);
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('protocolo');
+      url = u.href;
+    } catch {
+      this.note = { tone: 'error', lines: [tr('Use o endereço completo do feed, começando com https://.')] };
+      this.paint();
+      return;
+    }
+    const r = this.draft.radar ?? { feeds: [], keywords: [] };
+    if (r.feeds.includes(url)) return;
+    const max = this.info.limits.maxFeeds ?? 10;
+    if (r.feeds.length >= max) {
+      this.note = { tone: 'error', lines: [tr('No máximo {0} feeds.', [max])] };
+      this.paint();
+      return;
+    }
+    this.feedInput.value = '';
+    this.edit((d) => (d.radar = { feeds: [...r.feeds, url], keywords: [...r.keywords] }));
+  }
+
+  private addEvent(): void {
+    if (!this.draft || !this.info) return;
+    const title = this.eventTitle.value.replace(/\s+/g, ' ').trim();
+    const at = localToIso(this.eventAt.value, new Date(this.eventAt.value).getTimezoneOffset());
+    if (title.length < 2 || !at) {
+      this.note = { tone: 'error', lines: [tr('Dê um nome (2 a 80 letras) e uma data e hora ao evento.')] };
+      this.paint();
+      return;
+    }
+    const list = this.draft.events ?? [];
+    const max = this.info.limits.maxEvents ?? 50;
+    if (list.length >= max) {
+      this.note = { tone: 'error', lines: [tr('No máximo {0} eventos.', [max])] };
+      this.paint();
+      return;
+    }
+    this.eventTitle.value = '';
+    this.eventAt.value = '';
+    const impact = this.eventImpact.value as 'high' | 'medium' | 'low';
+    this.edit((d) => (d.events = [...list, { title, at, impact }].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))));
+  }
+
+  private paintAgenda(): void {
+    const d = this.draft!;
+    const fmt = new Intl.DateTimeFormat(intlLocale(), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const impactName: Record<string, string> = { high: tr('alto'), medium: tr('médio'), low: tr('baixo') };
+    this.eventsBox.replaceChildren(
+      ...(d.events ?? []).map((e, i) =>
+        h(
+          'div',
+          { class: 'ui-mk__event' },
+          h('span', { class: 'ui-ag__imp is-' + e.impact, title: impactName[e.impact] }),
+          h('span', { class: 'ui-mk__event-text', text: e.title + ' · ' + fmt.format(Date.parse(e.at)) }),
+          h('button', {
+            class: 'ui-mk__x',
+            type: 'button',
+            text: '✕',
+            attrs: { 'aria-label': tr('Tirar {0}', [e.title]) },
+            on: { click: () => this.edit((x) => (x.events = (x.events ?? []).filter((_, j) => j !== i))) },
+          }),
+        ),
+      ),
+    );
+    const feeds = d.radar?.feeds ?? [];
+    const live = this.ctx.store.coreState?.agenda?.feeds ?? [];
+    this.feedsBox.replaceChildren(
+      ...feeds.map((url) => {
+        const st = live.find((f) => f.url === url);
+        const cls = !st || !st.lastAt ? '' : st.ok ? ' is-ok' : ' is-off';
+        const why = !st || !st.lastAt ? tr('Ainda sem leitura deste feed') : st.ok ? tr('Respondendo') : tr('Fora agora: {0}', [st.error ?? '']);
+        let label = url;
+        try {
+          label = new URL(url).host;
+        } catch {
+          // fica o endereço inteiro
+        }
+        return h(
+          'span',
+          { class: 'ui-mk__chip', role: 'listitem', title: url },
+          h('span', { class: 'ui-mk__dot' + cls, title: why, attrs: { 'aria-label': why } }),
+          label,
+          h('button', {
+            class: 'ui-mk__x',
+            type: 'button',
+            text: '✕',
+            attrs: { 'aria-label': tr('Tirar {0}', [label]) },
+            on: { click: () => this.edit((x) => (x.radar = { feeds: (x.radar?.feeds ?? []).filter((f) => f !== url), keywords: [...(x.radar?.keywords ?? [])] })) },
+          }),
+        );
+      }),
+    );
   }
 
   private paintExchanges(): void {
@@ -651,5 +776,7 @@ const copy = (c: CoreConfig): CoreConfig => ({
   alerts: (c.alerts ?? []).map((a) => ({ ...a })),
   transfer: { sizeUsd: c.transfer?.sizeUsd ?? 1000, withdrawFees: Object.fromEntries(Object.entries(c.transfer?.withdrawFees ?? {}).map(([k, v]) => [k, { ...v }])) },
   wallets: (c.wallets ?? []).map((w) => ({ ...w })),
+  ...(c.events ? { events: c.events.map((e) => ({ ...e, ...(e.pairs ? { pairs: [...e.pairs] } : {}) })) } : {}),
+  ...(c.radar ? { radar: { feeds: [...c.radar.feeds], keywords: [...c.radar.keywords] } } : {}),
   ...(c.discovery ? { discovery: { tokens: c.discovery.tokens.map((t) => ({ ...t })), perToken: c.discovery.perToken } } : {}),
 });
