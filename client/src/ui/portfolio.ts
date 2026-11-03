@@ -28,6 +28,16 @@ export function sourcesDown(p: PortfolioInfo): string {
   return down.length ? tr('Fora agora: {0}', [down.map((s) => (s.error ? `${s.name} (${s.error})` : s.name)).join('; ')]) : '';
 }
 
+/** O saque está no número? Todas as salas, só algumas ou nenhuma (com o tamanho da operação usado). Puro (testável). */
+export function transferNote(p: PortfolioInfo, locale: string): string {
+  const t = p.transfer;
+  if (!t || t.total === 0) return '';
+  const size = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(t.sizeUsd);
+  if (t.included === t.total) return tr('Com o saque incluído (operação de US$ {0}).', [size]);
+  if (t.included > 0) return tr('Saque incluído em {0} de {1} salas (operação de US$ {2}); nas outras, sem custo de transferência.', [t.included, t.total, size]);
+  return tr('Sem custo de transferência: informe as taxas de saque em Mercados.');
+}
+
 /** Pontos do mini-gráfico numa caixa w×h (y para baixo); `up` = o último ponto é ≥ 0. Puro (testável). */
 export function sparkPoints(series: PortfolioInfo['series'], w: number, h: number): { points: Array<{ x: number; y: number }>; up: boolean } {
   if (series.length === 0) return { points: [], up: true };
@@ -75,7 +85,7 @@ export class PortfolioBar {
     setTitle(
       this.el,
       p.unit === 'pct'
-        ? [tr('{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.', [portfolioLine(p, locale)]), sourcesDown(p)].filter(Boolean).join('\n')
+        ? [p.transfer ? tr('{0}. Spread líquido já sem as taxas de compra e venda.', [portfolioLine(p, locale)]) : tr('{0}. Spread líquido já sem as taxas de compra e venda; sem custo de transferência entre corretoras.', [portfolioLine(p, locale)]), transferNote(p, locale), sourcesDown(p)].filter(Boolean).join('\n')
         : tr('Carteira: {0}. Ejetados hoje: {1}.', [portfolioLine(p, locale), p.ejected]),
     );
     this.drawSpark(p.series);

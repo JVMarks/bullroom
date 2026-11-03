@@ -12,6 +12,11 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Custo de transferência no spread (`?source=core`).** No painel Mercados, a seção "Custo de transferência" recebe
+  o tamanho da operação (padrão US$ 1.000) e a taxa de saque de cada corretora para cada moeda das salas (nenhuma
+  corretora informa essa taxa sem chave: o valor vem da página de taxas de cada uma). Onde a taxa existe, placa,
+  telão, topo, feed e alertas passam a usar o líquido já com o saque; o cartão da sala diz se ele está incluído ou
+  "não informado", e a dica do topo diz em quantas salas.
 - **Feed do modo ao vivo (`?source=core`).** A atividade deixa de ficar vazia: entra uma linha quando o melhor spread
   líquido de um par fica positivo ou volta a negativo, e quando a melhor rota muda de corretoras (só depois de 3
   leituras seguidas e no máximo uma vez a cada 5 minutos por par, para a sala não virar barulho).

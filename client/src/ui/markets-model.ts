@@ -1,5 +1,5 @@
 // Bullroom: regras do painel "Mercados" (corretoras e pares do OpenSpread). Puro (testável): sem DOM e sem rede.
-import type { CheckResult, ConfigLimits, CoreConfig } from '../../../shared/core/types';
+import type { CheckResult, ConfigLimits, CoreConfig, SpreadOpportunity } from '../../../shared/core/types';
 import { exchangeName } from '../../../shared/core/to-office';
 import { tr } from '../../../shared/i18n';
 
@@ -98,8 +98,48 @@ export function parseAlertPct(input: string, min = -1, max = 10): number | null 
   return n >= min && n <= max ? n : null;
 }
 
+/** Corretora × moeda-base que pedem taxa de saque: só as combinações em que a conferência diz que a corretora lista o par. */
+export function feeRows(exchanges: readonly string[], pairs: readonly string[], check: CheckResult | null): Array<{ exchange: string; asset: string }> {
+  const out: Array<{ exchange: string; asset: string }> = [];
+  const seen = new Set<string>();
+  for (const exchange of exchanges) {
+    const listings = check?.exchanges.find((e) => e.id === exchange)?.listings ?? [];
+    for (const pair of pairs) {
+      if (!listings.find((l) => l.pair === pair && l.symbol)) continue;
+      const asset = pair.split('/')[0];
+      if (seen.has(`${exchange}|${asset}`)) continue;
+      seen.add(`${exchange}|${asset}`);
+      out.push({ exchange, asset });
+    }
+  }
+  return out;
+}
+
+/** Quantidade digitada ("1", "0,5", " 2.25 ") → número entre 0 e `max`, ou null. */
+export function parseAmount(input: string, max = 1_000_000): number | null {
+  const t = input.trim().replace(',', '.');
+  if (!/^\d+(\.\d+)?$/.test(t)) return null;
+  const n = Number(t);
+  return n <= max ? n : null;
+}
+
+/** Linha do cartão da sala sobre o saque no melhor spread ao vivo; null quando o núcleo não manda a informação. */
+export function transferLine(best: SpreadOpportunity | null | undefined, locale: string): { tone: 'ok' | 'warn'; text: string } | null {
+  const t = best?.transfer;
+  if (!t) return null;
+  const num = (n: number, d: number) => new Intl.NumberFormat(locale, { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
+  const from = exchangeName(t.from);
+  if (t.netPct !== null) {
+    return { tone: 'ok', text: tr('Com o saque de {0} {1} na {2}: {3}% (operação de US$ {4})', [num(t.fee ?? 0, 2), t.asset, from, num(t.netPct, 2), num(t.sizeUsd, 0)]) };
+  }
+  if (t.missing === 'quote') return { tone: 'warn', text: tr('Saque não estimado: a cotação deste par não é em dólar.') };
+  return { tone: 'warn', text: tr('Saque não informado ({0} · {1}): o número da sala ainda não inclui a transferência.', [from, t.asset]) };
+}
+
 export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
   const eq = (x: readonly string[], y: readonly string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
   const alerts = (c: CoreConfig) => (c.alerts ?? []).map((x) => `${x.pair}@${x.abovePct}`);
-  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b));
+  const fees = (c: CoreConfig) =>
+    [`size:${c.transfer?.sizeUsd ?? 1000}`, ...Object.entries(c.transfer?.withdrawFees ?? {}).flatMap(([ex, m]) => Object.entries(m).map(([a, v]) => `${ex}:${a}:${v}`))].sort();
+  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b)) && eq(fees(a), fees(b));
 }

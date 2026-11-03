@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CORE_BASE, coreConfigApi } from './core-config';
 
-const CONFIG = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [] };
+const CONFIG = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } };
 
 /** fetch falso: registra o pedido e responde com o status e o corpo dados. */
 function fakeFetch(status: number, body: unknown, calls: Array<{ url: string; init?: RequestInit }> = []) {

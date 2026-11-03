@@ -11533,3 +11533,28 @@ button.ui-portfolio__sim:focus-visible {
 .ui-mk__dot.is-off {
   background: var(--lv-crit);
 }
+/* Bullroom: custo de transferência no painel Mercados (tamanho da operação e taxa de saque por corretora e moeda). */
+.ui-mk__transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ui-mk__fee {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.ui-mk__fee-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ui-mk__transfer-ok {
+  color: var(--ui-muted);
+  font-size: 12.5px;
+}
+.ui-mk__fee-in .ui-mk__hint {
+  min-width: 44px;
+}

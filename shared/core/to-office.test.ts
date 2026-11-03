@@ -116,4 +116,15 @@ describe('CoreOffice (núcleo → sala, conceito A)', () => {
     expect(office.feed(st(t2, -0.1, 'kraken', 'okx'))).toEqual([]);
     expect(office.feed(st(t2 + 10_000, -0.1, 'bybit', 'binance'))).toEqual([]);
   });
+
+  it('com o saque estimado, placa e topo usam o líquido com transferência e o resumo diz em quantas salas', () => {
+    const t = { asset: 'USDC', from: 'binance', sizeUsd: 1000, fee: 1, costPct: 0.1, netPct: -0.29 };
+    const withT: CoreState = { ...STATE, pairs: [{ ...STATE.pairs[0], best: { ...STATE.pairs[0].best!, transfer: t } }, STATE.pairs[1]] };
+    const snap = new CoreOffice(NOW).apply(withT);
+    expect(snap.rooms[0].trading!.pnlUsd).toBe(-0.29);
+    expect(snap.portfolio!.totalPnlUsd).toBe(-0.29);
+    expect(snap.portfolio!.transfer).toEqual({ included: 1, total: 1, sizeUsd: 1000 });
+    // sem configuração de transferência no núcleo: sem resumo (núcleo antigo)
+    expect(new CoreOffice(NOW).apply(STATE).portfolio!.transfer).toBeUndefined();
+  });
 });

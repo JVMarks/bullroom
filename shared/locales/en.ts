@@ -3384,4 +3384,22 @@ export const EN: Readonly<Record<string, string>> = {
   "Spread líquido ficou positivo: {0}": "Net spread turned positive: {0}",
   "Spread líquido voltou ao negativo: {0}": "Net spread back to negative: {0}",
   "Melhor rota agora: {0} → {1}": "Best route now: {0} → {1}",
+
+  // Bullroom: custo de transferência (markets.ts, markets-model.ts, portfolio.ts, shared/core/to-office.ts)
+  "Com o saque de {0} {1} na {2}: {3}% (operação de US$ {4})": "With the {0} {1} withdrawal on {2}: {3}% (US$ {4} trade)",
+  "Saque não estimado: a cotação deste par não é em dólar.": "Withdrawal not estimated: this pair is not quoted in dollars.",
+  "Saque não informado ({0} · {1}): o número da sala ainda não inclui a transferência.": "Withdrawal fee not set ({0} · {1}): the room number does not include the transfer yet.",
+  "Custo de transferência": "Transfer cost",
+  "Tamanho da operação em US$": "Trade size in US$",
+  "Tamanho da operação: um valor em US$ entre {0} e {1}.": "Trade size: a US$ amount between {0} and {1}.",
+  "Taxa de saque de {0} na {1}": "{0} withdrawal fee on {1}",
+  "Taxa de saque: uma quantidade da moeda, como 1 ou 0,5.": "Withdrawal fee: an amount of the coin, like 1 or 0.5.",
+  "A taxa de saque é fixa, então pesa mais em operações pequenas. Nenhuma corretora informa essa taxa sem chave: copie da página de taxas de saque de cada uma. Fora da conta: o tempo da transferência e a volta do dinheiro.": "The withdrawal fee is fixed, so it weighs more on small trades. No exchange shares it without a key: copy it from each exchange's withdrawal fee page. Not counted: the transfer time and moving the money back.",
+  "Tamanho da operação": "Trade size",
+  "Clique em Conferir para ver quais taxas de saque informar.": "Click Check to see which withdrawal fees to fill in.",
+  "Com o saque incluído (operação de US$ {0}).": "Withdrawal included (US$ {0} trade).",
+  "Saque incluído em {0} de {1} salas (operação de US$ {2}); nas outras, sem custo de transferência.": "Withdrawal included in {0} of {1} rooms (US$ {2} trade); the others have no transfer cost.",
+  "Sem custo de transferência: informe as taxas de saque em Mercados.": "No transfer cost: fill in the withdrawal fees in Markets.",
+  "{0}. Spread líquido já sem as taxas de compra e venda.": "{0}. Net spread after buy and sell fees.",
+  "{0} → {1} · {2}, já sem as taxas de compra e venda e o saque": "{0} → {1} · {2}, after buy and sell fees and the withdrawal",
 };

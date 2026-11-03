@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { portfolioLine, sourcesDown, sparkPoints } from './portfolio';
+import { portfolioLine, sourcesDown, sparkPoints, transferNote } from './portfolio';
 
 const P = { simulated: true, totalPnlUsd: 33.96, bots: 54, trading: 25, ejected: 2, series: [] };
 
@@ -37,5 +37,13 @@ describe('carteira na barra do topo (Bullroom)', () => {
     expect(portfolioLine(live, 'pt-BR')).toBe('-0,20% · melhor spread líquido · 2/3 corretoras ao vivo');
     expect(sourcesDown(live)).toBe('Fora agora: Kraken (timeout)');
     expect(sourcesDown({ ...live, sources: live.sources.map((x) => ({ ...x, ok: true })) })).toBe('');
+  });
+
+  it('dica do topo diz se o saque está no número', () => {
+    const live = { ...P, simulated: false, unit: 'pct' as const };
+    expect(transferNote(live, 'pt-BR')).toBe('');
+    expect(transferNote({ ...live, transfer: { included: 2, total: 2, sizeUsd: 1000 } }, 'pt-BR')).toBe('Com o saque incluído (operação de US$ 1.000).');
+    expect(transferNote({ ...live, transfer: { included: 1, total: 2, sizeUsd: 1000 } }, 'pt-BR')).toContain('1 de 2 salas');
+    expect(transferNote({ ...live, transfer: { included: 0, total: 2, sizeUsd: 1000 } }, 'pt-BR')).toContain('informe as taxas de saque');
   });
 });

@@ -3,7 +3,12 @@
 import type { AgentInfo, FeedItem, Notice, OfficeSnapshot, RoomInfo } from '../types';
 import { hash32 } from '../hash';
 import { intlLocale, tr } from '../i18n';
-import type { CoreState } from './types';
+import type { CoreState, SpreadOpportunity } from './types';
+
+/** Líquido que vale para a sala: com o saque quando o núcleo conseguiu estimar (mesma regra de core/src/transfer.ts). */
+export function effectiveNet(best: SpreadOpportunity): number {
+  return best.transfer?.netPct ?? best.netPct;
+}
 
 const SERIES_MAX = 360;
 /** Feed ao vivo: leituras seguidas para aceitar uma rota nova e intervalo mínimo entre avisos de rota do mesmo par. */
@@ -66,7 +71,7 @@ export class CoreOffice {
     let bestNet: number | null = null;
     state.pairs.forEach((p, slot) => {
       const id = `core:room:${p.pair}`;
-      const net = p.best ? p.best.netPct : 0;
+      const net = p.best ? effectiveNet(p.best) : 0;
       if (p.best) bestNet = bestNet === null ? net : Math.max(bestNet, net);
       const series = this.series.get(id) ?? [];
       if (!series.length || series[series.length - 1].at !== state.at) series.push({ at: state.at, pnlUsd: net });
@@ -105,6 +110,9 @@ export class CoreOffice {
     if (!this.total.length || this.total[this.total.length - 1].at !== state.at) this.total.push({ at: state.at, pnlUsd: top });
     if (this.total.length > SERIES_MAX) this.total.splice(0, this.total.length - SERIES_MAX);
     const online = state.exchanges.filter((e) => e.ok).length;
+    const withBest = state.pairs.filter((p) => p.best);
+    const included = withBest.filter((p) => p.best!.transfer?.netPct != null).length;
+    const sizeUsd = withBest.find((p) => p.best!.transfer)?.best!.transfer!.sizeUsd;
     return {
       rev: ++this.rev,
       serverTime: state.at,
@@ -119,6 +127,7 @@ export class CoreOffice {
         trading: online,
         ejected: 0,
         series: this.total.map((x) => ({ ...x })),
+        ...(sizeUsd !== undefined ? { transfer: { included, total: withBest.length, sizeUsd } } : {}),
         sources: state.exchanges.map((e) => ({ id: e.id, name: exchangeName(e.id), ok: e.ok, ...(e.ok || !e.error ? {} : { error: e.error }) })),
       },
       meta: { demo: false, sources: [], startedAt: this.startedAt, version: 'core' },
@@ -160,19 +169,23 @@ export class CoreOffice {
     for (const p of state.pairs) {
       if (!p.best) continue;
       const b = p.best;
-      const positive = b.netPct > 0;
+      const net = effectiveNet(b);
+      const positive = net > 0;
       const route = `${b.buyOn}>${b.sellOn}`;
       const prev = this.routes.get(p.pair);
       if (!prev) {
         this.routes.set(p.pair, { positive, route, pending: route, seen: 0, routeAt: state.at });
         continue;
       }
+      const routeArgs = [exchangeName(b.buyOn), exchangeName(b.sellOn), pct(net)];
+      const detail = () =>
+        b.transfer?.netPct != null ? tr('{0} → {1} · {2}, já sem as taxas de compra e venda e o saque', routeArgs) : tr('{0} → {1} · {2}, já sem as taxas de compra e venda', routeArgs);
       const item = (kind: string, icon: string, text: string): FeedItem => {
-        const activity = { id: `core-feed:${p.pair}:${state.at}:${kind}`, kind: 'other' as const, icon, text, detail: tr('{0} → {1} · {2}, já sem as taxas de compra e venda', [exchangeName(b.buyOn), exchangeName(b.sellOn), pct(b.netPct)]), at: state.at };
+        const activity = { id: `core-feed:${p.pair}:${state.at}:${kind}`, kind: 'other' as const, icon, text, detail: detail(), at: state.at };
         return { id: activity.id, agentId: `core:${b.sellOn}:${p.pair}`, roomId: `core:room:${p.pair}`, agentName: exchangeName(b.sellOn), roomName: p.pair, activity };
       };
       if (positive !== prev.positive) {
-        out.push(positive ? item('up', '✅', tr('Spread líquido ficou positivo: {0}', [pct(b.netPct)])) : item('down', '🔻', tr('Spread líquido voltou ao negativo: {0}', [pct(b.netPct)])));
+        out.push(positive ? item('up', '✅', tr('Spread líquido ficou positivo: {0}', [pct(net)])) : item('down', '🔻', tr('Spread líquido voltou ao negativo: {0}', [pct(net)])));
         prev.positive = positive;
       }
       if (route === prev.route) {

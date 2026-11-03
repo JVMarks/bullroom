@@ -3385,4 +3385,22 @@ export const ES: Readonly<Record<string, string>> = {
   "Spread líquido ficou positivo: {0}": "El spread neto pasó a positivo: {0}",
   "Spread líquido voltou ao negativo: {0}": "El spread neto volvió a negativo: {0}",
   "Melhor rota agora: {0} → {1}": "Mejor ruta ahora: {0} → {1}",
+
+  // Bullroom: custo de transferência (markets.ts, markets-model.ts, portfolio.ts, shared/core/to-office.ts)
+  "Com o saque de {0} {1} na {2}: {3}% (operação de US$ {4})": "Con el retiro de {0} {1} en {2}: {3}% (operación de US$ {4})",
+  "Saque não estimado: a cotação deste par não é em dólar.": "Retiro no estimado: este par no cotiza en dólares.",
+  "Saque não informado ({0} · {1}): o número da sala ainda não inclui a transferência.": "Retiro no informado ({0} · {1}): el número de la sala aún no incluye la transferencia.",
+  "Custo de transferência": "Costo de transferencia",
+  "Tamanho da operação em US$": "Tamaño de la operación en US$",
+  "Tamanho da operação: um valor em US$ entre {0} e {1}.": "Tamaño de la operación: un valor en US$ entre {0} y {1}.",
+  "Taxa de saque de {0} na {1}": "Comisión de retiro de {0} en {1}",
+  "Taxa de saque: uma quantidade da moeda, como 1 ou 0,5.": "Comisión de retiro: una cantidad de la moneda, como 1 o 0,5.",
+  "A taxa de saque é fixa, então pesa mais em operações pequenas. Nenhuma corretora informa essa taxa sem chave: copie da página de taxas de saque de cada uma. Fora da conta: o tempo da transferência e a volta do dinheiro.": "La comisión de retiro es fija, así que pesa más en operaciones pequeñas. Ningún exchange la informa sin clave: cópiala de la página de comisiones de retiro de cada uno. Fuera de la cuenta: el tiempo de la transferencia y la vuelta del dinero.",
+  "Tamanho da operação": "Tamaño de la operación",
+  "Clique em Conferir para ver quais taxas de saque informar.": "Haz clic en Comprobar para ver qué comisiones de retiro informar.",
+  "Com o saque incluído (operação de US$ {0}).": "Con el retiro incluido (operación de US$ {0}).",
+  "Saque incluído em {0} de {1} salas (operação de US$ {2}); nas outras, sem custo de transferência.": "Retiro incluido en {0} de {1} salas (operación de US$ {2}); en las otras, sin costo de transferencia.",
+  "Sem custo de transferência: informe as taxas de saque em Mercados.": "Sin costo de transferencia: informa las comisiones de retiro en Mercados.",
+  "{0}. Spread líquido já sem as taxas de compra e venda.": "{0}. Spread neto ya sin las comisiones de compra y venta.",
+  "{0} → {1} · {2}, já sem as taxas de compra e venda e o saque": "{0} → {1} · {2}, ya sin las comisiones de compra y venta ni el retiro",
 };

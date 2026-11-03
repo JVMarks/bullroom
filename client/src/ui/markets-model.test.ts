@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckResult } from '../../../shared/core/types';
-import { draftProblems, formatFee, isVolatile, normalizePair, parseAlertPct, roomSummary, sameConfig, searchExchanges } from './markets-model';
+import { draftProblems, feeRows, formatFee, isVolatile, normalizePair, parseAlertPct, parseAmount, roomSummary, sameConfig, searchExchanges, transferLine } from './markets-model';
 
-const LIMITS = { minExchanges: 2, maxExchanges: 20, maxPairs: 20, minPollMs: 5000, maxPollMs: 300000, maxAlerts: 20, minAlertPct: -1, maxAlertPct: 10 };
+const LIMITS = { minExchanges: 2, maxExchanges: 20, maxPairs: 20, minPollMs: 5000, maxPollMs: 300000, maxAlerts: 20, minAlertPct: -1, maxAlertPct: 10, minSizeUsd: 10, maxSizeUsd: 10000000 };
 
 const CHECK: CheckResult = {
   at: 1,
@@ -64,12 +64,12 @@ describe('painel Mercados: regras', () => {
   });
 
   it('problemas do rascunho seguem os limites do núcleo', () => {
-    expect(draftProblems({ exchanges: ['binance'], pairs: [], pollMs: 10000, alerts: [] }, LIMITS)).toHaveLength(2);
-    expect(draftProblems({ exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [] }, LIMITS)).toEqual([]);
+    expect(draftProblems({ exchanges: ['binance'], pairs: [], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } }, LIMITS)).toHaveLength(2);
+    expect(draftProblems({ exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } }, LIMITS)).toEqual([]);
   });
 
   it('compara configurações pela ordem e pelo intervalo', () => {
-    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [] };
+    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } };
     expect(sameConfig(a, { ...a, exchanges: ['binance', 'okx'] })).toBe(true);
     expect(sameConfig(a, { ...a, exchanges: ['okx', 'binance'] })).toBe(false);
     expect(sameConfig(a, { ...a, pollMs: 20000 })).toBe(false);
@@ -85,9 +85,45 @@ describe('painel Mercados: regras', () => {
   });
 
   it('mudar ou tirar um alerta conta como mudança', () => {
-    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [{ pair: 'BTC/USDT', abovePct: 0.05 }] };
+    const a = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [{ pair: 'BTC/USDT', abovePct: 0.05 }], transfer: { sizeUsd: 1000, withdrawFees: {} } };
     expect(sameConfig(a, { ...a, alerts: [{ pair: 'BTC/USDT', abovePct: 0.05 }] })).toBe(true);
     expect(sameConfig(a, { ...a, alerts: [{ pair: 'BTC/USDT', abovePct: 0.1 }] })).toBe(false);
     expect(sameConfig(a, { ...a, alerts: [] })).toBe(false);
+  });
+
+  it('taxas de saque pedidas: só corretora × moeda-base que a conferência diz que a corretora lista', () => {
+    expect(feeRows(['binance', 'coinbaseexchange', 'kraken'], ['USDC/USDT', 'DAI/USDT'], CHECK)).toEqual([
+      { exchange: 'binance', asset: 'USDC' },
+      { exchange: 'binance', asset: 'DAI' },
+      { exchange: 'coinbaseexchange', asset: 'USDC' },
+    ]);
+    expect(feeRows(['binance'], ['USDC/USDT'], null)).toEqual([]);
+  });
+
+  it('quantidade digitada aceita vírgula ou ponto e recusa negativo e texto', () => {
+    expect(parseAmount('1')).toBe(1);
+    expect(parseAmount(' 0,5 ')).toBe(0.5);
+    expect(parseAmount('0')).toBe(0);
+    expect(parseAmount('-1')).toBeNull();
+    expect(parseAmount('abc')).toBeNull();
+    expect(parseAmount('2000000')).toBeNull();
+  });
+
+  it('linha do saque no cartão: incluído, não informado ou não estimado', () => {
+    const best = { pair: 'USDC/USDT', buyOn: 'bybit', sellOn: 'binance', grossPct: 0, netPct: -0.2 };
+    expect(transferLine(best, 'pt-BR')).toBeNull();
+    const ok = transferLine({ ...best, transfer: { asset: 'USDC', from: 'bybit', sizeUsd: 1000, fee: 1, costPct: 0.1, netPct: -0.3 } }, 'pt-BR')!;
+    expect(ok.tone).toBe('ok');
+    expect(ok.text).toBe('Com o saque de 1,00 USDC na Bybit: -0,30% (operação de US$ 1.000)');
+    const miss = transferLine({ ...best, transfer: { asset: 'USDC', from: 'bybit', sizeUsd: 1000, fee: null, costPct: null, netPct: null, missing: 'fee' } }, 'pt-BR')!;
+    expect(miss).toMatchObject({ tone: 'warn' });
+    expect(miss.text).toContain('Bybit · USDC');
+  });
+
+  it('mudar o tamanho ou uma taxa de saque conta como mudança', () => {
+    const a = { exchanges: ['binance', 'okx'], pairs: ['USDC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: { okx: { USDC: 1 } } } };
+    expect(sameConfig(a, { ...a, transfer: { sizeUsd: 1000, withdrawFees: { okx: { USDC: 1 } } } })).toBe(true);
+    expect(sameConfig(a, { ...a, transfer: { sizeUsd: 500, withdrawFees: { okx: { USDC: 1 } } } })).toBe(false);
+    expect(sameConfig(a, { ...a, transfer: { sizeUsd: 1000, withdrawFees: {} } })).toBe(false);
   });
 });

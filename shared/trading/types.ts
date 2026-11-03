@@ -67,6 +67,8 @@ export interface PortfolioInfo {
   series: Array<{ at: number; pnlUsd: number }>;
   /** Ao vivo (núcleo do OpenSpread): cada corretora lida e se está respondendo. Ausente no simulador. */
   sources?: Array<{ id: string; name: string; ok: boolean; error?: string }>;
+  /** Ao vivo: em quantas salas o líquido já inclui o saque, de quantas, e o tamanho da operação usado. */
+  transfer?: { included: number; total: number; sizeUsd: number };
 }
 
 export type PnlTone = 'gain' | 'loss' | 'zero';

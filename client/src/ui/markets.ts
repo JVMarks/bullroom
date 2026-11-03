@@ -9,7 +9,7 @@ import { coreConfigApi, type CoreConfigApi, type CoreFailure } from '../net/core
 import type { UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { draftProblems, formatFee, normalizePair, parseAlertPct, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS } from './markets-model';
+import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine } from './markets-model';
 
 type Phase = 'demo' | 'loading' | 'offline' | 'ready';
 type Tone = 'ok' | 'warn' | 'error';
@@ -39,6 +39,10 @@ export class MarketsView {
   private rooms: HTMLElement;
   private pairInput: HTMLInputElement;
   private suggestions: HTMLElement;
+  /** Seção "Custo de transferência": tamanho da operação e taxa de saque por corretora e moeda. */
+  private transferBox: HTMLElement;
+  /** Assinatura do custo de transferência ao vivo já desenhado nos cartões das salas. */
+  private transferSig = '';
   private noteEl: HTMLElement;
   private checkBtn: HTMLButtonElement;
   private saveBtn: HTMLButtonElement;
@@ -72,6 +76,7 @@ export class MarketsView {
     this.pairInput = h('input', { class: 'ui-mk__input', type: 'text', attrs: { 'aria-label': tr('Novo par'), placeholder: tr('+ Nova sala, ex.: ETH/USDT'), autocomplete: 'off', spellcheck: 'false' } });
     const pairForm = h('form', { class: 'ui-mk__add', on: { submit: (e) => (e.preventDefault(), this.addPair(this.pairInput.value)) } }, this.pairInput);
     this.suggestions = h('div', { class: 'ui-mk__suggest' });
+    this.transferBox = h('div', { class: 'ui-mk__transfer' });
 
     this.noteEl = h('div', { class: 'ui-mk__note', role: 'status', attrs: { 'aria-live': 'polite' } });
     this.checkBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Conferir'), on: { click: () => void this.runCheck() } });
@@ -87,6 +92,8 @@ export class MarketsView {
       this.rooms,
       pairForm,
       this.suggestions,
+      h('h3', { class: 'ui-mk__label', text: tr('Custo de transferência') }),
+      this.transferBox,
     );
     const actions = h('div', { class: 'ui-mk__actions' }, this.checkBtn, this.saveBtn);
     this.el = h(
@@ -219,6 +226,11 @@ export class MarketsView {
     // O resto é redesenhado em paint(), quando algo do próprio painel muda (princípio da calma); aqui só as bolinhas
     // de status das corretoras, quando alguma muda.
     const sig = (this.ctx.store.snapshot?.portfolio?.sources ?? []).map((s) => `${s.id}:${s.ok}`).join(',');
+    const tsig = (this.ctx.store.coreState?.pairs ?? []).map((p) => `${p.pair}:${p.best?.transfer?.netPct ?? p.best?.transfer?.missing ?? ''}`).join(',');
+    if (tsig !== this.transferSig) {
+      this.transferSig = tsig;
+      if (this.phase === 'ready' && this.draft) this.paintRooms();
+    }
     if (sig !== this.sourcesSig) {
       this.sourcesSig = sig;
       if (this.phase === 'ready' && this.draft) this.paintExchanges();
@@ -250,6 +262,7 @@ export class MarketsView {
       if (this.searching) this.paintResults();
       this.paintRooms();
       this.paintSuggestions();
+      this.paintTransfer();
       const changed = !sameConfig(this.draft!, this.info!.config);
       this.checkBtn.disabled = this.busy !== null;
       this.saveBtn.disabled = this.busy !== null || !changed;
@@ -358,7 +371,7 @@ export class MarketsView {
             }),
           'ui-icon-btn--sm',
         );
-        return h('div', { class: `ui-mk__room${s.checked && !s.opens ? ' is-short' : ''}` }, h('div', { class: 'ui-mk__room-head' }, h('b', { text: pair }), remove), ...lines, this.alertRow(pair, locale));
+        return h('div', { class: `ui-mk__room${s.checked && !s.opens ? ' is-short' : ''}` }, h('div', { class: 'ui-mk__room-head' }, h('b', { text: pair }), remove), ...lines, ...this.transferRow(pair, locale), this.alertRow(pair, locale));
       }),
     );
   }
@@ -430,6 +443,70 @@ export class MarketsView {
     );
   }
 
+  /** No cartão da sala: o saque do melhor spread ao vivo (incluído, não informado ou não estimado). */
+  private transferRow(pair: string, locale: string): HTMLElement[] {
+    const best = this.ctx.store.coreState?.pairs.find((p) => p.pair === pair)?.best;
+    const line = transferLine(best, locale);
+    return line ? [h('p', { class: line.tone === 'ok' ? 'ui-mk__transfer-ok' : 'ui-mk__warn', text: line.text })] : [];
+  }
+
+  /** Tamanho da operação e a taxa de saque de cada corretora para cada moeda das salas (vazio = não informada). */
+  private paintTransfer(): void {
+    const d = this.draft!;
+    const limits = this.info!.limits;
+    const minSize = limits.minSizeUsd ?? 10;
+    const maxSize = limits.maxSizeUsd ?? 10_000_000;
+    const commit = (input: HTMLInputElement, apply: (v: string) => void) => {
+      input.addEventListener('change', () => apply(input.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        }
+      });
+    };
+    const size = h('input', { class: 'ui-mk__input ui-mk__pct', type: 'text', attrs: { inputmode: 'decimal', value: String(d.transfer.sizeUsd), 'aria-label': tr('Tamanho da operação em US$') } });
+    commit(size, (v) => {
+      const n = parseAmount(v, maxSize);
+      if (n === null || n < minSize) {
+        this.note = { tone: 'error', lines: [tr('Tamanho da operação: um valor em US$ entre {0} e {1}.', [minSize, maxSize])] };
+        this.paint();
+        return;
+      }
+      this.edit((x) => (x.transfer.sizeUsd = n));
+    });
+    const rows = feeRows(d.exchanges, d.pairs, this.check).map(({ exchange, asset }) => {
+      const current = d.transfer.withdrawFees[exchange]?.[asset];
+      const input = h('input', {
+        class: 'ui-mk__input ui-mk__pct',
+        type: 'text',
+        attrs: { inputmode: 'decimal', placeholder: '—', value: current === undefined ? '' : String(current), 'aria-label': tr('Taxa de saque de {0} na {1}', [asset, exchangeName(exchange)]) },
+      });
+      commit(input, (v) => {
+        if (!v.trim()) {
+          this.edit((x) => {
+            delete x.transfer.withdrawFees[exchange]?.[asset];
+            if (x.transfer.withdrawFees[exchange] && !Object.keys(x.transfer.withdrawFees[exchange]).length) delete x.transfer.withdrawFees[exchange];
+          });
+          return;
+        }
+        const n = parseAmount(v);
+        if (n === null) {
+          this.note = { tone: 'error', lines: [tr('Taxa de saque: uma quantidade da moeda, como 1 ou 0,5.')] };
+          this.paint();
+          return;
+        }
+        this.edit((x) => ((x.transfer.withdrawFees[exchange] ??= {})[asset] = n));
+      });
+      return h('div', { class: 'ui-mk__fee' }, h('span', { text: `${exchangeName(exchange)} · ${asset}` }), h('span', { class: 'ui-mk__fee-in' }, input, h('span', { class: 'ui-mk__hint', text: asset })));
+    });
+    this.transferBox.replaceChildren(
+      h('p', { class: 'ui-mk__hint', text: tr('A taxa de saque é fixa, então pesa mais em operações pequenas. Nenhuma corretora informa essa taxa sem chave: copie da página de taxas de saque de cada uma. Fora da conta: o tempo da transferência e a volta do dinheiro.') }),
+      h('div', { class: 'ui-mk__fee' }, h('span', { text: tr('Tamanho da operação') }), h('span', { class: 'ui-mk__fee-in' }, size, h('span', { class: 'ui-mk__hint', text: 'US$' }))),
+      ...(rows.length ? rows : [h('p', { class: 'ui-mk__hint', text: tr('Clique em Conferir para ver quais taxas de saque informar.') })]),
+    );
+  }
+
   private paintSuggestions(): void {
     const free = SUGGESTED_PAIRS.filter((p) => !this.draft!.pairs.includes(p)).slice(0, 4);
     setHidden(this.suggestions, free.length === 0);
@@ -440,4 +517,10 @@ export class MarketsView {
   }
 }
 
-const copy = (c: CoreConfig): CoreConfig => ({ exchanges: [...c.exchanges], pairs: [...c.pairs], pollMs: c.pollMs, alerts: (c.alerts ?? []).map((a) => ({ ...a })) });
+const copy = (c: CoreConfig): CoreConfig => ({
+  exchanges: [...c.exchanges],
+  pairs: [...c.pairs],
+  pollMs: c.pollMs,
+  alerts: (c.alerts ?? []).map((a) => ({ ...a })),
+  transfer: { sizeUsd: c.transfer?.sizeUsd ?? 1000, withdrawFees: Object.fromEntries(Object.entries(c.transfer?.withdrawFees ?? {}).map(([k, v]) => [k, { ...v }])) },
+});

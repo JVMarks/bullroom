@@ -112,6 +112,8 @@ export class OfficeStore {
   readonly mock: boolean;
   /** ?source=core: os dados vêm do núcleo local do OpenSpread. */
   readonly core: boolean;
+  /** ?source=core: último estado bruto do núcleo (o painel Mercados lê o custo de transferência de cada sala). */
+  coreState: CoreState | null = null;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private listeners = new Map<keyof StoreEvents, Set<(value: any) => void>>();
@@ -555,6 +557,7 @@ export class OfficeStore {
       if (!current()) return;
       const state = this.parse<CoreState>(ev, 'estado do núcleo');
       if (!state) return;
+      this.coreState = state;
       this.applySnapshot(office.apply(state));
       for (const n of office.alertNotices(state)) this.emit('notice', n);
       const feed = office.feed(state);

@@ -3401,4 +3401,22 @@ export const FR: Readonly<Record<string, string>> = {
   "Spread líquido ficou positivo: {0}": "Le spread net est devenu positif : {0}",
   "Spread líquido voltou ao negativo: {0}": "Le spread net est redevenu négatif : {0}",
   "Melhor rota agora: {0} → {1}": "Meilleure route : {0} → {1}",
+
+  // Bullroom: custo de transferência (markets.ts, markets-model.ts, portfolio.ts, shared/core/to-office.ts)
+  "Com o saque de {0} {1} na {2}: {3}% (operação de US$ {4})": "Avec le retrait de {0} {1} sur {2} : {3} % (opération de {4} US$)",
+  "Saque não estimado: a cotação deste par não é em dólar.": "Retrait non estimé : cette paire n'est pas cotée en dollars.",
+  "Saque não informado ({0} · {1}): o número da sala ainda não inclui a transferência.": "Frais de retrait non renseignés ({0} · {1}) : le chiffre de la salle n'inclut pas encore le transfert.",
+  "Custo de transferência": "Coût de transfert",
+  "Tamanho da operação em US$": "Taille de l'opération en US$",
+  "Tamanho da operação: um valor em US$ entre {0} e {1}.": "Taille de l'opération : un montant en US$ entre {0} et {1}.",
+  "Taxa de saque de {0} na {1}": "Frais de retrait de {0} sur {1}",
+  "Taxa de saque: uma quantidade da moeda, como 1 ou 0,5.": "Frais de retrait : une quantité de la monnaie, comme 1 ou 0,5.",
+  "A taxa de saque é fixa, então pesa mais em operações pequenas. Nenhuma corretora informa essa taxa sem chave: copie da página de taxas de saque de cada uma. Fora da conta: o tempo da transferência e a volta do dinheiro.": "Les frais de retrait sont fixes, ils pèsent donc plus sur les petites opérations. Aucune plateforme ne les donne sans clé : copiez-les depuis la page des frais de retrait de chacune. Hors calcul : la durée du transfert et le retour de l'argent.",
+  "Tamanho da operação": "Taille de l'opération",
+  "Clique em Conferir para ver quais taxas de saque informar.": "Cliquez sur Vérifier pour voir quels frais de retrait renseigner.",
+  "Com o saque incluído (operação de US$ {0}).": "Retrait inclus (opération de {0} US$).",
+  "Saque incluído em {0} de {1} salas (operação de US$ {2}); nas outras, sem custo de transferência.": "Retrait inclus dans {0} salles sur {1} (opération de {2} US$) ; les autres sans coût de transfert.",
+  "Sem custo de transferência: informe as taxas de saque em Mercados.": "Sans coût de transfert : renseignez les frais de retrait dans Marchés.",
+  "{0}. Spread líquido já sem as taxas de compra e venda.": "{0}. Spread net, frais d'achat et de vente déduits.",
+  "{0} → {1} · {2}, já sem as taxas de compra e venda e o saque": "{0} → {1} · {2}, frais d'achat, de vente et de retrait déduits",
 };
