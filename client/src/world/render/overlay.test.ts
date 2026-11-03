@@ -1,7 +1,7 @@
 // Regras puras da camada de texto do mundo (balões e enquadramento).
 import { describe, expect, it } from 'vitest';
 import { overviewFrame } from '../camera';
-import { pnlBadge, rationBubbles, roomPillParts, waitBubbleText } from './overlay';
+import { pnlBadge, pnlIntensity, rationBubbles, roomPillParts, waitBubbleText } from './overlay';
 import type { AgentInfo } from '../../../../shared/types';
 
 describe('balões', () => {
@@ -78,5 +78,20 @@ describe('placa da sala com PL (Bullroom)', () => {
   });
   it('sala comum (sem PL): igual ao habblaud', () => {
     expect(roomPillParts('loja', 2, undefined, 'pt-BR', all)).toEqual({ name: 'loja', count: '2', pnl: '', tone: 'zero' });
+  });
+});
+
+describe('placa: intensidade pelo tamanho do PL (a sala que mais perde sangra mais)', () => {
+  it('proporcional ao maior |PL| entre as salas, de 0 a 1, para ganho e perda', () => {
+    expect(pnlIntensity(-1.04, 2.77)).toBeCloseTo(0.3755, 3);
+    expect(pnlIntensity(2.77, 2.77)).toBe(1);
+    expect(pnlIntensity(-2.77, 2.77)).toBe(1);
+    expect(pnlIntensity(0, 2.77)).toBe(0);
+  });
+
+  it('sem PL ou com todas as salas em zero: sem intensidade', () => {
+    expect(pnlIntensity(undefined, 2)).toBe(0);
+    expect(pnlIntensity(0, 0)).toBe(0);
+    expect(pnlIntensity(1, 0)).toBe(0);
   });
 });

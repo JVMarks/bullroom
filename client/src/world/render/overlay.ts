@@ -71,6 +71,21 @@ export function roomPillParts(
   return { ...parts, tone };
 }
 
+/**
+ * Força da placa pelo tamanho do PL: |pnl| dividido pelo maior |PL| entre as salas (0 a 1). A sala que mais ganha ou
+ * mais perde fica com a cor mais forte ("a que mais perde sangra mais"). Sem PL ou tudo zero = 0. Puro (testável).
+ */
+export function pnlIntensity(pnl: number | undefined, maxAbs: number): number {
+  if (pnl === undefined || !(maxAbs > 0)) return 0;
+  return Math.min(1, Math.abs(pnl) / maxAbs);
+}
+
+/** Cor #rrggbb com transparência. */
+function withAlpha(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${Math.round(a * 1000) / 1000})`;
+}
+
 /** Texto e tom do balão de PL de um robô; null para agentes que não são de trading. Puro (testável). */
 export function pnlBadge(agent: Pick<AgentInfo, 'trading' | 'badge'>, locale: string): { text: string; tone: PnlTone } | null {
   const t = agent.trading;
@@ -534,11 +549,44 @@ export class Overlay {
       if (room) {
         // endereço antigo de uma mudança: o nome já está na sala nova
         if (!room.present || room.ghost || (anim && anim.walls < 0.6)) continue;
-        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd, room.info.trading?.unit);
+        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd, room.info.trading?.unit, pnlIntensity(room.info.trading?.pnlUsd, this.pnlMaxAbs()));
       } else if (CORE_NAMES[vis.id]) {
         this.drawCorePill(CORE_NAMES[vis.id], cx, cy, colW - 8);
       }
     }
+  }
+
+  /** Fundo da placa e a barra lateral na cor da sala. */
+  private pillBase(x: number, y: number, w: number, h: number, accent: string): void {
+    const { ctx } = this;
+    ctx.fillStyle = 'rgba(22,27,40,0.9)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 7);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.roundRect(x, y, 4, h, [7, 0, 0, 7]);
+    ctx.fill();
+  }
+
+  /** Fundo do chip do PL tingido na cor do tom, mais forte quanto maior o PL entre as salas (`t` de 0 a 1). */
+  private chipFill(color: string, t: number): string {
+    return withAlpha(color, 0.12 + 0.5 * t);
+  }
+
+  /** Texto do chip: com o fundo forte, branco para manter o contraste. */
+  private chipText(color: string, t: number): string {
+    return t > 0.55 ? '#f3f5fa' : color;
+  }
+
+  /** Maior |PL| entre as salas de trading presentes (escala da intensidade das placas). */
+  private pnlMaxAbs(): number {
+    let m = 0;
+    for (const r of this.sim.rooms.values()) {
+      const p = r.info.trading?.pnlUsd;
+      if (p !== undefined && r.present) m = Math.max(m, Math.abs(p));
+    }
+    return m;
   }
 
   /** Altura dos ícones sobre a cabeça, contando o balão "!" de quem viu o CI falhar (render/github-fx.ts). */
@@ -605,7 +653,7 @@ export class Overlay {
     }
   }
 
-  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number, unit?: ValueUnit): void {
+  private drawRoomPill(name: string, cx: number, cy: number, maxW: number, accounts: string[], count: number, accent: string, lit: boolean, pnl?: number, unit?: ValueUnit, strength = 0): void {
     const { ctx } = this;
     const fullW = maxW;
     let dots = accounts.filter((a) => this.sim.accounts.has(a));
@@ -633,7 +681,7 @@ export class Overlay {
     // Só vira pílula compacta quando o nome precisou ser cortado (nomes curtos como "app" cabem inteiros).
     const compact = text !== name && text.length < 4;
     // Bullroom: sala de trading estreita (celular, visão geral): em vez de sumir com o nome, placa de duas linhas
-    if (compact && pnlText) return this.drawStackedPill(name, cx, cy, fullW, accent, lit, pnlText, parts.tone);
+    if (compact && pnlText) return this.drawStackedPill(name, cx, cy, fullW, accent, lit, pnlText, parts.tone, strength);
     const tw = compact ? 0 : this.measure(ROOM_FONT, text);
     const w = Math.round(compact ? Math.max(12, 10 + cw + pw + dots.length * 10) : tw + extras);
     const h = 22;
@@ -645,14 +693,7 @@ export class Overlay {
     ctx.beginPath();
     ctx.roundRect(x, y + 2, w, h, 7);
     ctx.fill();
-    ctx.fillStyle = 'rgba(22,27,40,0.9)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 7);
-    ctx.fill();
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.roundRect(x, y, 4, h, [7, 0, 0, 7]);
-    ctx.fill();
+    this.pillBase(x, y, w, h, accent);
     let dx = x + 10;
     if (!compact) {
       ctx.font = ROOM_FONT;
@@ -676,7 +717,7 @@ export class Overlay {
     }
     if (pnlText) {
       const color = PNL_COLORS[parts.tone];
-      ctx.fillStyle = 'rgba(8,11,16,0.85)';
+      ctx.fillStyle = this.chipFill(color, strength);
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -684,7 +725,7 @@ export class Overlay {
       ctx.fill();
       ctx.stroke();
       ctx.font = LABEL_FONT;
-      ctx.fillStyle = color;
+      ctx.fillStyle = this.chipText(color, strength);
       ctx.fillText(pnlText, dx + 7, y + h / 2 + 0.5);
     }
     ctx.restore();
@@ -692,7 +733,7 @@ export class Overlay {
   }
 
   /** Placa de sala de trading em duas linhas: o par em cima (fonte menor se precisar) e o PL embaixo. */
-  private drawStackedPill(name: string, cx: number, cy: number, maxW: number, accent: string, lit: boolean, pnlText: string, tone: PnlTone): void {
+  private drawStackedPill(name: string, cx: number, cy: number, maxW: number, accent: string, lit: boolean, pnlText: string, tone: PnlTone, strength = 0): void {
     const { ctx } = this;
     const font = this.measure(ROOM_FONT, name) <= maxW - 14 ? ROOM_FONT : CORE_FONT_SMALL;
     const text = this.fit(font, name, maxW - 14);
@@ -708,19 +749,12 @@ export class Overlay {
     ctx.beginPath();
     ctx.roundRect(x, y + 2, w, h, 7);
     ctx.fill();
-    ctx.fillStyle = 'rgba(22,27,40,0.9)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, 7);
-    ctx.fill();
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.roundRect(x, y, 4, h, [7, 0, 0, 7]);
-    ctx.fill();
+    this.pillBase(x, y, w, h, accent);
     ctx.font = font;
     ctx.fillStyle = '#f3f5fa';
     ctx.fillText(text, x + 10, y + 10);
     const color = PNL_COLORS[tone];
-    ctx.fillStyle = 'rgba(8,11,16,0.85)';
+    ctx.fillStyle = this.chipFill(color, strength);
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -728,7 +762,7 @@ export class Overlay {
     ctx.fill();
     ctx.stroke();
     ctx.font = LABEL_FONT;
-    ctx.fillStyle = color;
+    ctx.fillStyle = this.chipText(color, strength);
     ctx.fillText(pnlText, x + 13, y + 25.5);
     ctx.restore();
     this.place(x, y, w, h);

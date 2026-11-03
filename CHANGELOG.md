@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Placa com a força do PL.** O chip do PL na placa de cada sala de trading fica mais forte quanto maior o PL em
+  relação às outras salas (a sala que mais ganha ou mais perde se destaca de longe), com texto branco quando forte.
+  Estático, sem animação.
 - **Ajuda e Configurações dos modos de trading.** A Ajuda (?) vira "Como ler a sala de trading", com uma versão para
   os robôs simulados e outra para as corretoras ao vivo (sala, painéis, OpenSpread, controles e só os atalhos que
   valem ali). Nas Configurações, "Escritório" vira "Sala", as notificações do navegador (só existem para "precisa de
