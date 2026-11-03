@@ -12,6 +12,14 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Carteiras on-chain (`?source=core`).** Em Mercados › Carteiras, cole endereços públicos de Solana, Ethereum, Base
+  ou Bitcoin (a rede sai do formato; para 0x você escolhe Ethereum ou Base). Cada rede vira uma sala ("Carteiras ·
+  Solana") e cada carteira um personagem: sentado com posição aberta, circulando zerado, com o resultado realizado
+  de 7 dias sobre a cabeça (`+1,20 SOL`) quando fechou alguma venda. O cartão da carteira mostra resultado, vendas,
+  acertos e erros, posição e as últimas operações, cada uma com link para o explorador público; o painel "Ranking"
+  (Configurações › Mercados ou o botão no cartão) mostra os melhores e, ao lado, os piores. Só o endereço encurtado,
+  sem nome; sem aviso de "comprou" e sem botão de copiar. Com a chave do Birdeye no computador, a "Descoberta" traz
+  os top traders dos tokens escolhidos, marcados como "descoberta" e separados da sua lista.
 - **Spread em janelas de tempo (`?source=core`).** Clicar no número do topo abre o painel "Spreads": o melhor spread
   líquido de cada sala agora e quanto mudou em 5 min, 1 h e 24 h (▲/▼ em pontos percentuais), mais a faixa de 24 h
   (mínimo · agora · máximo). O cartão de cada sala ganha "Spread em janelas" com as três caixas. O histórico (uma

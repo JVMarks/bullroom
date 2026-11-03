@@ -3,7 +3,7 @@
 import type { AgentInfo } from '../../../shared/types';
 import { tr } from '../../../shared/i18n';
 
-type Who = Pick<AgentInfo, 'trading' | 'badge'>;
+type Who = Pick<AgentInfo, 'trading' | 'badge' | 'wallet'>;
 
 /** No lugar do "Principal": a posição do robô, ou "corretora". */
 export function tradingRoleLabel(a: Who): string | null {
@@ -12,6 +12,7 @@ export function tradingRoleLabel(a: Who): string | null {
     if (t.ejectedAt !== undefined) return tr('ejetado');
     return t.position === 'long' ? tr('comprado') : t.position === 'short' ? tr('vendido') : tr('zerado');
   }
+  if (a.wallet) return tr('carteira');
   return a.badge ? tr('corretora') : null;
 }
 
@@ -22,15 +23,16 @@ export function tradingStatusLabel(a: Who): string | null {
     if (t.ejectedAt !== undefined) return tr('Ejetado');
     return t.position === 'flat' ? tr('Zerado') : tr('Operando');
   }
+  if (a.wallet) return a.wallet.chain === 'bitcoin' ? tr('Ao vivo') : a.wallet.open ? tr('Posição aberta') : tr('Zerada');
   return a.badge ? tr('Ao vivo') : null;
 }
 
 /** Título do painel: "Robô" ou "Corretora" (no lugar de "Agente"). */
 export function tradingHeading(a: Who): string | null {
-  return a.trading ? tr('Robô') : a.badge ? tr('Corretora') : null;
+  return a.trading ? tr('Robô') : a.wallet ? tr('Carteira') : a.badge ? tr('Corretora') : null;
 }
 
 /** Linha de atividade sem nenhuma operação ainda (no lugar de "Aguardando instruções"). */
 export function tradingActivityFallback(a: Who): string | null {
-  return a.trading ? tr('sem operação ainda') : a.badge ? tr('ao vivo') : null;
+  return a.trading || a.wallet ? tr('sem operação ainda') : a.badge ? tr('ao vivo') : null;
 }

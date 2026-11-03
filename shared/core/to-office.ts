@@ -3,7 +3,8 @@
 import type { AgentInfo, FeedItem, Notice, OfficeSnapshot, RoomInfo } from '../types';
 import { hash32 } from '../hash';
 import { intlLocale, tr } from '../i18n';
-import type { CoreState, SpreadOpportunity } from './types';
+import type { ValueUnit } from '../trading/types';
+import type { CoreState, SpreadOpportunity, WalletChain, WalletState } from './types';
 
 /** Líquido que vale para a sala: com o saque quando o núcleo conseguiu estimar (mesma regra de core/src/transfer.ts). */
 export function effectiveNet(best: SpreadOpportunity): number {
@@ -50,6 +51,30 @@ export function exchangeName(id: string): string {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/** Nome exibido de cada rede. */
+export const CHAIN_NAMES: Readonly<Record<WalletChain, string>> = { solana: 'Solana', ethereum: 'Ethereum', base: 'Base', bitcoin: 'Bitcoin' };
+const CHAIN_ORDER: readonly WalletChain[] = ['solana', 'ethereum', 'base', 'bitcoin'];
+const QUOTE_UNIT: Readonly<Record<string, ValueUnit>> = { SOL: 'sol', ETH: 'eth', BTC: 'btc', USD: 'usd' };
+const NATIVE: Readonly<Record<WalletChain, string>> = { solana: 'SOL', ethereum: 'ETH', base: 'ETH', bitcoin: 'BTC' };
+
+/** `7xKX…9fQ`: endereço encurtado (nunca nome de pessoa). */
+export const shortAddress = (a: string): string => (a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
+
+/** Id da sala de uma rede e do personagem de uma carteira. */
+export const walletRoomId = (chain: WalletChain): string => `core:wallets:${chain}`;
+export const walletAgentId = (w: Pick<WalletState, 'chain' | 'address'>): string => `core:wallet:${w.chain}:${w.address}`;
+
+/**
+ * Resultado que vai sobre a cabeça: o da moeda da rede, senão o em dólar (stablecoin). Só com venda fechada no
+ * período; Bitcoin não tem troca na rede, então não tem balão. Puro.
+ */
+export function walletBadge(w: WalletState): { value: number; unit: ValueUnit } | undefined {
+  if (!w.trades) return undefined;
+  const r = w.results.find((x) => x.quote === NATIVE[w.chain]) ?? w.results.find((x) => x.quote === 'USD') ?? w.results[0];
+  const unit = r && QUOTE_UNIT[r.quote];
+  return r && unit ? { value: r.amount, unit } : undefined;
+}
 
 export class CoreOffice {
   private series = new Map<string, Array<{ at: number; pnlUsd: number }>>();
@@ -106,6 +131,40 @@ export class CoreOffice {
         });
       });
     });
+    // Carteiras on-chain: uma sala por rede, depois das salas de par; cada carteira é um personagem (sentado com
+    // posição aberta, circulando zerado). Nada de feed nem aviso: a sala só se mexe.
+    const wallets = state.wallets?.wallets ?? [];
+    for (const chain of CHAIN_ORDER) {
+      const list = wallets.filter((w) => w.chain === chain);
+      if (!list.length) continue;
+      const roomId = walletRoomId(chain);
+      rooms.push({ id: roomId, name: tr('Carteiras · {0}', [CHAIN_NAMES[chain]]), path: `openspread://wallets/${chain}`, slot: rooms.length, seed: hash32(roomId), createdAt: this.startedAt });
+      for (const w of list) {
+        const id = walletAgentId(w);
+        const badge = walletBadge(w);
+        const last = w.ops[0];
+        agents.push({
+          id,
+          kind: 'main',
+          roomId,
+          name: shortAddress(w.address),
+          look: hash32(w.address) % 2 ? 'f' : 'm',
+          role: w.source === 'birdeye' ? tr('Carteira · {0} · descoberta', [CHAIN_NAMES[chain]]) : tr('Carteira · {0}', [CHAIN_NAMES[chain]]),
+          sessionId: id,
+          account: 'core',
+          status: w.open ? 'working' : 'idle',
+          recent: [],
+          tasks: [],
+          startedAt: this.startedAt,
+          lastEventAt: last?.at ?? w.lastAt ?? this.startedAt,
+          statusSince: this.startedAt,
+          stats: { toolCalls: 0, tokensIn: 0, tokensOut: 0, subagents: 0 },
+          seed: hash32(w.address),
+          ...(badge ? { badge } : {}),
+          wallet: w,
+        });
+      }
+    }
     const top = bestNet ?? 0;
     if (!this.total.length || this.total[this.total.length - 1].at !== state.at) this.total.push({ at: state.at, pnlUsd: top });
     if (this.total.length > SERIES_MAX) this.total.splice(0, this.total.length - SERIES_MAX);

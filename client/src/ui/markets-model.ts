@@ -1,5 +1,5 @@
 // Bullroom: regras do painel "Mercados" (corretoras e pares do OpenSpread). Puro (testável): sem DOM e sem rede.
-import type { CheckResult, ConfigLimits, CoreConfig, SpreadOpportunity } from '../../../shared/core/types';
+import type { CheckResult, ConfigLimits, CoreConfig, SpreadOpportunity, WalletChain } from '../../../shared/core/types';
 import { exchangeName } from '../../../shared/core/to-office';
 import { tr } from '../../../shared/i18n';
 
@@ -141,5 +141,25 @@ export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
   const alerts = (c: CoreConfig) => (c.alerts ?? []).map((x) => `${x.pair}@${x.abovePct}`);
   const fees = (c: CoreConfig) =>
     [`size:${c.transfer?.sizeUsd ?? 1000}`, ...Object.entries(c.transfer?.withdrawFees ?? {}).flatMap(([ex, m]) => Object.entries(m).map(([a, v]) => `${ex}:${a}:${v}`))].sort();
-  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b)) && eq(fees(a), fees(b));
+  const wallets = (c: CoreConfig) => (c.wallets ?? []).map((w) => `${w.chain}:${w.address}`);
+  const discovery = (c: CoreConfig) => (c.discovery ? [`per:${c.discovery.perToken}`, ...c.discovery.tokens.map((t) => `${t.chain}:${t.address}`)] : []);
+  return eq(a.exchanges, b.exchanges) && eq(a.pairs, b.pairs) && a.pollMs === b.pollMs && eq(alerts(a), alerts(b)) && eq(fees(a), fees(b)) && eq(wallets(a), wallets(b)) && eq(discovery(a), discovery(b));
+}
+
+/**
+ * Rede pelo formato do endereço colado (o núcleo confere o checksum ao salvar). EVM serve à Ethereum e à Base:
+ * devolve 'evm' e a tela pergunta qual. Puro.
+ */
+export function walletKind(input: string): 'solana' | 'evm' | 'bitcoin' | null {
+  const s = input.trim();
+  if (/^0x[0-9a-fA-F]{40}$/.test(s)) return 'evm';
+  if (/^(bc1[02-9ac-hj-np-z]{11,71}|BC1[02-9AC-HJ-NP-Z]{11,71}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(s)) return 'bitcoin';
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s)) return 'solana';
+  return null;
+}
+
+/** Endereço como o núcleo guarda (EVM em minúsculas, bech32 em minúsculas). */
+export function normalizeWallet(chain: WalletChain, input: string): string {
+  const s = input.trim();
+  return chain === 'ethereum' || chain === 'base' || (chain === 'bitcoin' && /^bc1/i.test(s)) ? s.toLowerCase() : s;
 }

@@ -4,6 +4,7 @@ import { tradingActivityFallback, tradingHeading, tradingStatusLabel } from './t
 import { BotCard } from './bot-card';
 import { MarketsView } from './markets';
 import { RoomWindows, SpreadsView } from './spreads';
+import { RankingView, WalletCard } from './wallet-card';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
 import { roomTheme } from '../art';
 import { createAvatarPlaceholder, updateAvatar } from './avatar';
@@ -264,6 +265,7 @@ class AgentView {
   private stats: KvList<StatKey>;
   /** Bullroom: cartão do robô (só para agentes com `trading`) e a seção de estatísticas do Claude Code. */
   private botCard: BotCard;
+  private walletCard: WalletCard;
   private statsSecEl: HTMLElement;
   private social: SocialSection;
   readonly character: CharacterEditor;
@@ -410,6 +412,7 @@ class AgentView {
     const statsSec = section(tr('Estatísticas'), this.stats.el);
     this.statsSecEl = statsSec.el;
     this.botCard = new BotCard();
+    this.walletCard = new WalletCard(ctx);
     this.codexHint = h('p', { class: 'ui-codex-hint', hidden: true }, ...richText(CODEX_LIVE_HINT));
 
     this.el = h(
@@ -421,6 +424,7 @@ class AgentView {
       this.gone,
       statusRow,
       this.botCard.el,
+      this.walletCard.el,
       this.termBtn,
       this.termWhy,
       this.alert,
@@ -560,7 +564,7 @@ class AgentView {
     setHidden(this.accEmail, !accSub);
     setText(this.roomName, room?.name ?? a.roomId);
     // Bullroom: robô e corretora não têm conta (chip, nome, e-mail)
-    if (a.trading || a.badge) for (const el of [this.accChip, this.accName, this.accProv, this.accEmail]) setHidden(el, true);
+    if (a.trading || a.badge || a.wallet) for (const el of [this.accChip, this.accName, this.accProv, this.accEmail]) setHidden(el, true);
     setTitle(this.roomBtn, room ? tr('{0}\nClique para ver a sala', [room.path]) : '');
     setHidden(this.gone, !!live);
     this.el.classList.toggle('is-gone', !live);
@@ -674,7 +678,8 @@ class AgentView {
     // Bullroom: robô de trading mostra o cartão e esconde o que é do Claude Code (terminal, mensagem, tarefas,
     // subagentes, tokens) e a vida social (moedinhas e apostas não combinam com trading); agente comum fica igual.
     this.botCard.render(a, now);
-    if (a.trading || a.badge) for (const el of [this.termBtn, this.termWhy, this.msgSec.el, this.social.el, this.tasksSec.el, this.teamSec.el, this.statsSecEl]) setHidden(el, true);
+    this.walletCard.render(a, now);
+    if (a.trading || a.badge || a.wallet) for (const el of [this.termBtn, this.termWhy, this.msgSec.el, this.social.el, this.tasksSec.el, this.teamSec.el, this.statsSecEl]) setHidden(el, true);
 
     // Codex: como ter o ao vivo e as aprovações por aqui (o servidor ainda não diz se os hooks dele estão ligados).
     setHidden(this.codexHint, !codex || a.kind !== 'main' || !live || this.ctx.store.replaying);
@@ -979,7 +984,7 @@ class RoomView {
 // ---------------------------------------------------------------- gaveta
 
 /** Painéis do Bullroom na gaveta (fora da seleção do escritório). */
-export type DrawerPanel = 'markets' | 'spreads';
+export type DrawerPanel = 'markets' | 'spreads' | 'ranking';
 
 export class Drawer implements UiComponent {
   readonly el: HTMLElement;
@@ -988,6 +993,7 @@ export class Drawer implements UiComponent {
   private roomView: RoomView;
   private marketsView: MarketsView;
   private spreadsView: SpreadsView;
+  private rankingView: RankingView;
   private mode: 'agent' | 'room' | DrawerPanel | null = null;
   /** Painel do Bullroom pedido ("Mercados" ou "Spreads"). Uma seleção no escritório tem prioridade e fecha o painel. */
   private panelWanted: DrawerPanel | null = null;
@@ -1005,9 +1011,10 @@ export class Drawer implements UiComponent {
     this.roomView = new RoomView(ctx, pty);
     this.marketsView = new MarketsView(ctx);
     this.spreadsView = new SpreadsView(ctx);
+    this.rankingView = new RankingView(ctx);
     this.heading = h('span', { class: 'ui-drawer__kind' });
     const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => {
-      if (this.mode === 'markets' || this.mode === 'spreads') this.togglePanel(this.mode, false);
+      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking') this.togglePanel(this.mode, false);
       else ctx.select(null);
     });
     this.body = h('div', { class: 'ui-drawer__body' });
@@ -1039,6 +1046,7 @@ export class Drawer implements UiComponent {
     if (open) {
       if (this.ctx.selection()) this.ctx.select(null);
       if (kind === 'markets') this.marketsView.open();
+      else if (kind === 'ranking') this.rankingView.open();
       else this.spreadsView.open();
     }
     this.ctx.invalidate();
@@ -1061,7 +1069,7 @@ export class Drawer implements UiComponent {
       // Gaveta fechada ou fora do agente: o editor fecha, e ao reabrir começa do estado atual do agente.
       if (this.mode === 'agent') this.agentView.character.close();
       this.mode = mode;
-      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : []));
+      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : []));
       this.body.scrollTop = 0;
       this.el.classList.toggle('is-open', mode !== null);
       setAttr(this.el, 'aria-hidden', mode ? 'false' : 'true');
@@ -1084,6 +1092,9 @@ export class Drawer implements UiComponent {
     } else if (mode === 'spreads') {
       setText(this.heading, tr('Spreads'));
       this.spreadsView.render();
+    } else if (mode === 'ranking') {
+      setText(this.heading, tr('Ranking'));
+      this.rankingView.render();
     }
   }
 }

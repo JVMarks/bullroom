@@ -4,7 +4,8 @@
 export type BotPosition = 'long' | 'short' | 'flat';
 
 /** Unidade de um valor mostrado (balão, placa, telão, carteira). Ausente = 'usd'. */
-export type ValueUnit = 'usd' | 'pct' | 'bp';
+/** usd/pct/bp: robôs e corretoras; sol/eth/btc: resultado de carteira on-chain na moeda da própria rede. */
+export type ValueUnit = 'usd' | 'pct' | 'bp' | 'sol' | 'eth' | 'btc';
 
 /** Estado de trading de um robô. Vai em AgentInfo.trading. */
 export interface BotTrading {

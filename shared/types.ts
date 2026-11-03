@@ -7,6 +7,7 @@
 import type { AppearanceParts } from './appearance';
 import type { WorldMeta } from './world/api';
 import type { BotTrading, PortfolioInfo, RoomTrading, ValueUnit } from './trading/types';
+import type { WalletState } from './core/types';
 
 export type AgentKind = 'main' | 'sub';
 
@@ -191,6 +192,8 @@ export interface AgentInfo {
   trading?: BotTrading;
   /** Bullroom: balão de valor sobre a cabeça de quem não é robô (ex.: corretora observada, em pontos-base). */
   badge?: { value: number; unit: ValueUnit };
+  /** Bullroom: o personagem é uma carteira on-chain acompanhada (só ao vivo, com o núcleo). Ausente = não é. */
+  wallet?: WalletState;
 }
 
 export interface RoomInfo {

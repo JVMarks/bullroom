@@ -15,7 +15,7 @@ import { buildAnim } from './anim';
 import { drawFxBanner } from './github-fx';
 import type { HeadInfo, Renderer } from './renderer';
 import { intlLocale, tr } from '../../../../shared/i18n';
-import { formatPnl, formatValue, pnlTone } from '../../../../shared/trading/rules';
+import { formatPnl, formatValue, pnlTone, valueTone } from '../../../../shared/trading/rules';
 import type { PnlTone, ValueUnit } from '../../../../shared/trading/types';
 import type { AgentInfo } from '../../../../shared/types';
 
@@ -92,7 +92,7 @@ export function pnlBadge(agent: Pick<AgentInfo, 'trading' | 'badge'>, locale: st
   if (t) return { text: formatPnl(t.pnlUsd, locale), tone: pnlTone(t.pnlUsd) };
   // corretora observada (núcleo do OpenSpread): valor em outra unidade
   const b = agent.badge;
-  return b ? { text: formatValue(b.value, b.unit, locale), tone: pnlTone(b.value) } : null;
+  return b ? { text: formatValue(b.value, b.unit, locale), tone: valueTone(b.value, b.unit) } : null;
 }
 /** Abaixo deste zoom (visão geral), os balões de atividade são racionados. */
 export const OVERVIEW_ZOOM = 1.8;

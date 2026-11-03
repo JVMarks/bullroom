@@ -71,6 +71,8 @@ export interface UiContext {
   toggleMarkets(open?: boolean): void;
   /** Abre/fecha o painel "Spreads" (melhor spread de cada sala em 5 min, 1 h e 24 h) na gaveta da direita. */
   toggleSpreads(open?: boolean): void;
+  /** Abre/fecha o painel "Ranking" (melhores e piores carteiras on-chain) na gaveta da direita. */
+  toggleRanking(open?: boolean): void;
   /** Abre/fecha a janela do Habblaud World (o botão da barra do topo; ui/world/world-dialog.ts). */
   toggleWorld(): void;
   /** Abre o campo de renomear a sala perto do ponto (px da janela); botão direito na sala (ui/roomrename.ts). */

@@ -202,6 +202,27 @@ export class SettingsPopover implements UiComponent {
           },
         }),
       ),
+      h(
+        'div',
+        { class: 'ui-set' },
+        h(
+          'div',
+          { class: 'ui-set__text' },
+          h('span', { class: 'ui-set__label', text: tr('Ranking de carteiras') }),
+          h('span', { class: 'ui-set__hint', text: tr('Melhores e piores carteiras on-chain que você acompanha.') }),
+        ),
+        h('button', {
+          class: 'ui-btn',
+          type: 'button',
+          text: tr('Abrir'),
+          on: {
+            click: () => {
+              this.hide();
+              ctx.toggleRanking(true);
+            },
+          },
+        }),
+      ),
     );
 
     this.logoutBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Sair'), on: { click: () => void this.logout() } }) as HTMLButtonElement;

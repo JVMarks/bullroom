@@ -3,13 +3,14 @@
 // taxa taker pública) e "Salvar e aplicar" grava o arquivo do núcleo, que troca as salas sem reiniciar.
 // Só existe de verdade com ?source=core; na demonstração simulada o painel explica como ligar o núcleo.
 import type { CheckResult, ConfigInfo, CoreConfig } from '../../../shared/core/types';
-import { exchangeName } from '../../../shared/core/to-office';
+import { CHAIN_NAMES, exchangeName, shortAddress } from '../../../shared/core/to-office';
+import type { WalletChain } from '../../../shared/core/types';
 import { intlLocale, tr } from '../../../shared/i18n';
 import { coreConfigApi, type CoreConfigApi, type CoreFailure } from '../net/core-config';
 import type { UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine } from './markets-model';
+import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, normalizeWallet, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine, walletKind } from './markets-model';
 
 type Phase = 'demo' | 'loading' | 'offline' | 'ready';
 type Tone = 'ok' | 'warn' | 'error';
@@ -43,6 +44,15 @@ export class MarketsView {
   private transferBox: HTMLElement;
   /** Assinatura do custo de transferência ao vivo já desenhado nos cartões das salas. */
   private transferSig = '';
+  private walletsBox: HTMLElement;
+  private walletInput: HTMLInputElement;
+  private walletEvm: HTMLSelectElement;
+  private discoveryEl: HTMLElement;
+  private discoveryKey: HTMLElement;
+  private discoveryBox: HTMLElement;
+  private tokenInput: HTMLInputElement;
+  private tokenChain: HTMLSelectElement;
+  private perToken: HTMLInputElement;
   private noteEl: HTMLElement;
   private checkBtn: HTMLButtonElement;
   private saveBtn: HTMLButtonElement;
@@ -78,6 +88,26 @@ export class MarketsView {
     this.suggestions = h('div', { class: 'ui-mk__suggest' });
     this.transferBox = h('div', { class: 'ui-mk__transfer' });
 
+    this.walletsBox = h('div', { class: 'ui-mk__chips', role: 'list' });
+    this.walletInput = h('input', { class: 'ui-mk__input', type: 'text', attrs: { 'aria-label': tr('Endereço público da carteira'), placeholder: tr('+ Endereço público (Solana, Ethereum, Base ou Bitcoin)'), autocomplete: 'off', spellcheck: 'false' }, on: { input: () => this.paintWalletChain() } });
+    const chainOption = (chain: WalletChain) => h('option', { text: CHAIN_NAMES[chain], attrs: { value: chain } });
+    this.walletEvm = h('select', { class: 'ui-mk__input ui-mk__select', hidden: true, attrs: { 'aria-label': tr('Rede do endereço 0x') } }, chainOption('ethereum'), chainOption('base'));
+    const walletForm = h('form', { class: 'ui-mk__add', on: { submit: (e) => (e.preventDefault(), this.addWallet()) } }, this.walletInput, this.walletEvm, h('button', { class: 'ui-btn', type: 'submit', text: tr('Acompanhar') }));
+    this.discoveryKey = h('p', { class: 'ui-mk__hint' });
+    this.discoveryBox = h('div', { class: 'ui-mk__chips', role: 'list' });
+    this.tokenInput = h('input', { class: 'ui-mk__input', type: 'text', attrs: { 'aria-label': tr('Endereço do token'), placeholder: tr('+ Endereço do token (mint ou contrato)'), autocomplete: 'off', spellcheck: 'false' } });
+    this.tokenChain = h('select', { class: 'ui-mk__input ui-mk__select', attrs: { 'aria-label': tr('Rede do token') } }, chainOption('solana'), chainOption('ethereum'), chainOption('base'));
+    this.perToken = h('input', { class: 'ui-mk__input ui-mk__num', type: 'number', attrs: { min: 1, max: 10, step: 1, 'aria-label': tr('Carteiras por token') }, on: { change: () => this.setPerToken() } });
+    const tokenForm = h('form', { class: 'ui-mk__add', on: { submit: (e) => (e.preventDefault(), this.addToken()) } }, this.tokenChain, this.tokenInput, h('button', { class: 'ui-btn', type: 'submit', text: tr('Adicionar') }));
+    this.discoveryEl = h(
+      'div',
+      {},
+      h('h3', { class: 'ui-mk__label', text: tr('Descoberta (top traders, Birdeye)') }),
+      this.discoveryKey,
+      this.discoveryBox,
+      tokenForm,
+      h('label', { class: 'ui-mk__hint ui-mk__inline' }, tr('Carteiras por token'), this.perToken),
+    );
     this.noteEl = h('div', { class: 'ui-mk__note', role: 'status', attrs: { 'aria-live': 'polite' } });
     this.checkBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Conferir'), on: { click: () => void this.runCheck() } });
     this.saveBtn = h('button', { class: 'ui-btn ui-btn--primary', type: 'button', text: tr('Salvar e aplicar'), on: { click: () => void this.save() } });
@@ -94,6 +124,11 @@ export class MarketsView {
       this.suggestions,
       h('h3', { class: 'ui-mk__label', text: tr('Custo de transferência') }),
       this.transferBox,
+      h('h3', { class: 'ui-mk__label', text: tr('Carteiras (on-chain)') }),
+      this.walletsBox,
+      walletForm,
+      h('p', { class: 'ui-mk__hint', text: tr('Só o endereço público, nunca nome. Cada rede vira uma sala; cada carteira, um personagem. A Base precisa da chave grátis do Blockscout no seu computador.') }),
+      this.discoveryEl,
     );
     const actions = h('div', { class: 'ui-mk__actions' }, this.checkBtn, this.saveBtn);
     this.el = h(
@@ -263,6 +298,7 @@ export class MarketsView {
       this.paintRooms();
       this.paintSuggestions();
       this.paintTransfer();
+      this.paintWallets();
       const changed = !sameConfig(this.draft!, this.info!.config);
       this.checkBtn.disabled = this.busy !== null;
       this.saveBtn.disabled = this.busy !== null || !changed;
@@ -273,6 +309,97 @@ export class MarketsView {
     this.noteEl.replaceChildren(...(this.note ? this.note.lines.map((l) => h('p', { text: l })) : []));
     this.noteEl.className = `ui-mk__note${this.note ? ` is-${this.note.tone}` : ''}`;
     setHidden(this.noteEl, !this.note);
+  }
+
+  /** O seletor Ethereum/Base só aparece para endereço 0x (o formato é o mesmo nas duas redes). */
+  private paintWalletChain(): void {
+    setHidden(this.walletEvm, walletKind(this.walletInput.value) !== 'evm');
+  }
+
+  private addWallet(): void {
+    if (!this.draft || !this.info) return;
+    const raw = this.walletInput.value.trim();
+    const kind = walletKind(raw);
+    if (!kind) {
+      this.note = { tone: 'error', lines: [tr('Não reconheci esse endereço. Cole o endereço público de Solana, Ethereum, Base ou Bitcoin.')] };
+      this.paint();
+      return;
+    }
+    const chain: WalletChain = kind === 'evm' ? (this.walletEvm.value as WalletChain) : kind;
+    const address = normalizeWallet(chain, raw);
+    const list = this.draft.wallets ?? [];
+    if (list.some((w) => w.chain === chain && w.address === address)) return;
+    const max = this.info.limits.maxWallets ?? 30;
+    if (list.length >= max) {
+      this.note = { tone: 'error', lines: [tr('No máximo {0} carteiras.', [max])] };
+      this.paint();
+      return;
+    }
+    this.walletInput.value = '';
+    this.paintWalletChain();
+    this.edit((d) => (d.wallets = [...(d.wallets ?? []), { chain, address }]));
+  }
+
+  private addToken(): void {
+    if (!this.draft || !this.info) return;
+    const raw = this.tokenInput.value.trim();
+    const chain = this.tokenChain.value as 'solana' | 'ethereum' | 'base';
+    const kind = walletKind(raw);
+    if (!(chain === 'solana' ? kind === 'solana' : kind === 'evm')) {
+      this.note = { tone: 'error', lines: [tr('Endereço de token inválido para {0}.', [CHAIN_NAMES[chain]])] };
+      this.paint();
+      return;
+    }
+    const address = normalizeWallet(chain, raw);
+    const d = this.draft.discovery ?? { tokens: [], perToken: 5 };
+    if (d.tokens.some((t) => t.chain === chain && t.address === address)) return;
+    const max = this.info.limits.maxDiscoveryTokens ?? 5;
+    if (d.tokens.length >= max) {
+      this.note = { tone: 'error', lines: [tr('No máximo {0} tokens na descoberta.', [max])] };
+      this.paint();
+      return;
+    }
+    this.tokenInput.value = '';
+    this.edit((x) => (x.discovery = { tokens: [...d.tokens, { chain, address }], perToken: d.perToken }));
+  }
+
+  private setPerToken(): void {
+    const n = Math.round(Number(this.perToken.value));
+    const max = this.info?.limits.maxPerToken ?? 10;
+    if (!this.draft?.discovery || !(n >= 1 && n <= max)) return void this.paint();
+    this.edit((x) => (x.discovery = { ...x.discovery!, perToken: n }));
+  }
+
+  private paintWallets(): void {
+    const d = this.draft!;
+    const live = this.ctx.store.coreState?.wallets?.wallets ?? [];
+    const chip = (label: string, title: string, remove: () => void, dot?: HTMLElement) =>
+      h('span', { class: 'ui-mk__chip', role: 'listitem', title }, ...(dot ? [dot] : []), label, h('button', { class: 'ui-mk__x', type: 'button', text: '✕', attrs: { 'aria-label': tr('Tirar {0}', [label]) }, on: { click: remove } }));
+    this.walletsBox.replaceChildren(
+      ...(d.wallets ?? []).map((w) => {
+        const st = live.find((x) => x.chain === w.chain && x.address === w.address);
+        const cls = !st || (!st.lastAt && !st.error) ? '' : st.ok ? ' is-ok' : ' is-off';
+        const why = !st || (!st.lastAt && !st.error) ? tr('Ainda sem leitura desta carteira') : st.ok ? tr('Respondendo') : tr('Fora agora: {0}', [st.error ?? '']);
+        const dot = h('span', { class: 'ui-mk__dot' + cls, title: why, attrs: { 'aria-label': why } });
+        const label = CHAIN_NAMES[w.chain] + ' · ' + shortAddress(w.address);
+        return chip(label, w.address, () => this.edit((x) => (x.wallets = (x.wallets ?? []).filter((y) => !(y.chain === w.chain && y.address === w.address)))), dot);
+      }),
+    );
+    setText(
+      this.discoveryKey,
+      this.info!.keys?.birdeye
+        ? tr('Chave do Birdeye encontrada no seu computador. Para cada token, as carteiras de maior volume em 24 h entram marcadas "descoberta", separadas da sua lista; o resultado mostrado é o nosso, pela mesma regra.')
+        : tr('Sem chave do Birdeye: crie uma em bds.birdeye.so e coloque em OPENSPREAD_BIRDEYE_KEY ou em ~/.openspread/keys.json. A chave fica só no seu computador.'),
+    );
+    const disc = d.discovery;
+    this.discoveryBox.replaceChildren(
+      ...(disc?.tokens ?? []).map((t) => {
+        const label = CHAIN_NAMES[t.chain] + ' · ' + shortAddress(t.address);
+        return chip(label, t.address, () => this.edit((x) => (x.discovery = { tokens: (x.discovery?.tokens ?? []).filter((y) => !(y.chain === t.chain && y.address === t.address)), perToken: x.discovery?.perToken ?? 5 })));
+      }),
+    );
+    if (document.activeElement !== this.perToken) this.perToken.value = String(disc?.perToken ?? 5);
+    this.perToken.disabled = !disc?.tokens.length;
   }
 
   private paintExchanges(): void {
@@ -523,4 +650,6 @@ const copy = (c: CoreConfig): CoreConfig => ({
   pollMs: c.pollMs,
   alerts: (c.alerts ?? []).map((a) => ({ ...a })),
   transfer: { sizeUsd: c.transfer?.sizeUsd ?? 1000, withdrawFees: Object.fromEntries(Object.entries(c.transfer?.withdrawFees ?? {}).map(([k, v]) => [k, { ...v }])) },
+  wallets: (c.wallets ?? []).map((w) => ({ ...w })),
+  ...(c.discovery ? { discovery: { tokens: c.discovery.tokens.map((t) => ({ ...t })), perToken: c.discovery.perToken } } : {}),
 });

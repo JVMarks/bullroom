@@ -11677,3 +11677,156 @@ button.ui-portfolio__total:focus-visible {
   color: var(--ui-muted);
   font-size: 11.5px;
 }
+
+/* Bullroom: carteiras on-chain (cartão, ranking e a seção Carteiras do Mercados). */
+.ui-mk__add:has(.ui-mk__select:not([hidden])),
+.ui-mk__add:has(.ui-btn) {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ui-mk__select {
+  width: auto;
+  flex: 0 0 auto;
+}
+.ui-mk__num {
+  width: 64px;
+  margin-left: 8px;
+}
+.ui-mk__inline {
+  display: flex;
+  align-items: center;
+}
+.ui-wl__hero {
+  flex-wrap: wrap;
+}
+.ui-wl__none {
+  font-size: 12.5px;
+  color: var(--ui-muted);
+}
+.ui-wl__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #8b93a3;
+}
+.ui-wl__ops {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ui-wl__link {
+  color: inherit;
+  text-decoration: none;
+}
+.ui-wl__op .ui-wl__link {
+  display: grid;
+  grid-template-columns: 74px 1fr auto;
+  grid-template-areas: 'kind text pnl' 'kind when when';
+  gap: 0 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ui-wl__op .ui-wl__link:hover,
+.ui-wl__op .ui-wl__link:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+}
+.ui-wl__kind {
+  grid-area: kind;
+  font-weight: 700;
+  color: #c8ceda;
+}
+.ui-wl__op.is-buy .ui-wl__kind {
+  color: #4ade80;
+}
+.ui-wl__op.is-sell .ui-wl__kind {
+  color: #f87171;
+}
+.ui-wl__op.is-unclassified .ui-wl__kind {
+  color: #8b93a3;
+}
+.ui-wl__text {
+  grid-area: text;
+  color: #e6e9f0;
+  overflow-wrap: anywhere;
+}
+.ui-wl__pnl {
+  grid-area: pnl;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ui-wl__when {
+  grid-area: when;
+  font-size: 10.5px;
+  color: #7d8596;
+}
+.ui-wl > .ui-wl__link {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--ui-accent);
+  text-decoration: underline;
+}
+.ui-wl__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ui-wl__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 420px) {
+  .ui-wl__cols {
+    grid-template-columns: 1fr;
+  }
+}
+.ui-wl__colh {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8b93a3;
+}
+.ui-wl__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ui-wl__rrow {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  grid-template-areas: 'pos addr pnl' 'pos ntr ntr';
+  gap: 0 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ui-wl__pos {
+  grid-area: pos;
+  color: #7d8596;
+  font-weight: 700;
+}
+.ui-wl__addr {
+  grid-area: addr;
+  justify-self: start;
+  font-family: var(--font-mono, monospace);
+}
+.ui-wl__ntr {
+  grid-area: ntr;
+  font-size: 10.5px;
+  color: #7d8596;
+}
+.ui-wl__rrow .ui-wl__pnl {
+  grid-area: pnl;
+}
