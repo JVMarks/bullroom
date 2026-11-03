@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Ajuda e Configurações dos modos de trading.** A Ajuda (?) vira "Como ler a sala de trading", com uma versão para
+  os robôs simulados e outra para as corretoras ao vivo (sala, painéis, OpenSpread, controles e só os atalhos que
+  valem ali). Nas Configurações, "Escritório" vira "Sala", as notificações do navegador (só existem para "precisa de
+  você") saem, a dica de HABBLAUD_LANG some e o "Sobre" mostra o Bullroom, o crédito ao habblaud e os links.
 - **Custo de transferência no spread (`?source=core`).** No painel Mercados, a seção "Custo de transferência" recebe
   o tamanho da operação (padrão US$ 1.000) e a taxa de saque de cada corretora para cada moeda das salas (nenhuma
   corretora informa essa taxa sem chave: o valor vem da página de taxas de cada uma). Onde a taxa existe, placa,

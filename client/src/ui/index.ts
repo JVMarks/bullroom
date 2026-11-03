@@ -21,7 +21,7 @@ import { HelpDialog } from './help';
 import { HistoryPopover } from './history';
 import { Deliveries } from './deliveries';
 import { HoverTip } from './hovertip';
-import { hasRunningShells } from './model';
+import { hasRunningShells, tradingOffice } from './model';
 import { hasCodexPermission } from './provider';
 import { Notifier } from './notify';
 import { ConnectionBanner, EmptyState, Splash } from './overlays';
@@ -278,7 +278,7 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       void sw.visitOwn();
     };
   }
-  help = new HelpDialog();
+  help = new HelpDialog(() => (!tradingOffice(store.snapshot) ? 'office' : store.core ? 'live' : 'sim'));
   const day = new DayLauncher(ctx, (el) => root.append(el));
   topbar.addPanelButton(day.button);
   // Botão direito numa sala (lista lateral ou escritório): renomear.

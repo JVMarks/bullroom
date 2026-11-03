@@ -11558,3 +11558,10 @@ button.ui-portfolio__sim:focus-visible {
 .ui-mk__fee-in .ui-mk__hint {
   min-width: 44px;
 }
+/* Bullroom: links do "Sobre" nos modos de trading. */
+.ui-about__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 6px 0;
+}

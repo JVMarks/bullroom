@@ -4,6 +4,7 @@ import { access, remoteLogout } from '../net/access';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText } from './dom';
 import { ICONS } from './icons';
+import { tradingOffice } from './model';
 import { notificationState, type Notifier } from './notify';
 import type { UiPrefs } from './prefs';
 import { SoundSettingsGroup } from './settings-sound';
@@ -98,6 +99,11 @@ export class SettingsPopover implements UiComponent {
   private remoteGroup: HTMLElement;
   private logoutBtn: HTMLButtonElement;
   private about: AboutGroup;
+  /** Bullroom: nos modos de trading, partes do habblaud trocam de texto ou somem (sem agentes, sem servidor). */
+  private officeTitle: HTMLElement;
+  private noticesGroup: HTMLElement;
+  private langHint: HTMLElement;
+  private bullroomAbout: HTMLElement;
   private demoBusy = false;
   private anchor: HTMLElement | null = null;
 
@@ -161,9 +167,8 @@ export class SettingsPopover implements UiComponent {
       [['auto', tr('Automático')], ...LOCALES.map((l): [LanguageChoice, string] => [l.id, l.name])],
       (v) => pickLanguage(v),
     );
-    this.language.row.append(
-      h('span', { class: 'ui-set__hint', text: tr('Os textos das atividades vêm do servidor: seguem HABBLAUD_LANG ou o idioma do sistema onde o Habblaud roda (o inglês, só com HABBLAUD_LANG=en).') }),
-    );
+    this.langHint = h('span', { class: 'ui-set__hint', text: tr('Os textos das atividades vêm do servidor: seguem HABBLAUD_LANG ou o idioma do sistema onde o Habblaud roda (o inglês, só com HABBLAUD_LANG=en).') });
+    this.language.row.append(this.langHint);
 
     this.demoGroup = h(
       'div',
@@ -219,6 +224,23 @@ export class SettingsPopover implements UiComponent {
 
     this.theme.row.append(world.themeNote);
     this.about = new AboutGroup(ctx);
+    const link = (text: string, href: string) => h('a', { class: 'ui-link-btn', text, attrs: { href, target: '_blank', rel: 'noopener noreferrer' } });
+    this.bullroomAbout = h(
+      'div',
+      { class: 'ui-set-group', hidden: true },
+      h('h3', { text: tr('Sobre') }),
+      h('p', { class: 'ui-set__hint', text: tr('Bullroom: seus robôs de trading como uma sala em pixel art. Código aberto (MIT), um projeto bitcoin100treta.') }),
+      h('p', { class: 'ui-set__hint', text: tr('Feito a partir do habblaud, de Márcio Junior (MIT). Os dados ao vivo vêm do OpenSpread, que roda no seu computador.') }),
+      h('div', { class: 'ui-about__links' }, link(tr('Bullroom no GitHub'), 'https://github.com/JVMarks/bullroom'), link(tr('OpenSpread no GitHub'), 'https://github.com/JVMarks/OpenSpread'), link(tr('Site'), 'https://bullroom.vercel.app')),
+      h('p', { class: 'ui-set__hint', text: tr('Projeto educativo: não é recomendação de investimento.') }),
+    );
+    this.officeTitle = h('h3', { text: tr('Escritório') });
+    this.noticesGroup = h(
+      'div',
+      { class: 'ui-set-group' },
+      h('h3', { text: tr('Avisos') }),
+      sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém precisa de você e a aba está em segundo plano.'), () => void this.toggleNotifications()),
+    );
 
     const close = iconButton(ICONS.close, tr('Fechar configurações'), () => this.hide(), 'ui-icon-btn--sm');
     this.el = h(
@@ -230,23 +252,19 @@ export class SettingsPopover implements UiComponent {
       h(
         'div',
         { class: 'ui-set-group' },
-        h('h3', { text: tr('Escritório') }),
+        this.officeTitle,
         sw('showNames', tr('Mostrar nomes'), tr('Etiqueta com o nome acima de cada personagem.'), flip('showNames')),
         this.bubbles.row,
         this.liveliness.row,
         this.daylight.row,
       ),
-      h(
-        'div',
-        { class: 'ui-set-group' },
-        h('h3', { text: tr('Avisos') }),
-        sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém precisa de você e a aba está em segundo plano.'), () => void this.toggleNotifications()),
-      ),
+      this.noticesGroup,
       this.soundGroup.el,
       h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Idioma') }), this.language.row),
       this.demoGroup,
       this.remoteGroup,
       this.about.el,
+      this.bullroomAbout,
     );
     this.el.addEventListener('toggle', () => {
       this.anchor?.setAttribute('aria-expanded', String(this.isOpen));
@@ -321,6 +339,16 @@ export class SettingsPopover implements UiComponent {
     setHidden(this.marketsGroup, !this.ctx.store.snapshot?.portfolio);
     setHidden(this.remoteGroup, !access().remote);
     this.about.render();
+    const trading = tradingOffice(this.ctx.store.snapshot);
+    setText(this.officeTitle, trading ? tr('Sala') : tr('Escritório'));
+    const moveLabel = this.liveliness.row.querySelector('.ui-set__label');
+    if (moveLabel) setText(moveLabel, trading ? tr('Movimento pela sala') : tr('Movimento pelo escritório'));
+    setText(this.switches.get('showNames')!.hint, trading ? tr('Etiqueta com o nome acima de cada robô ou corretora.') : tr('Etiqueta com o nome acima de cada personagem.'));
+    // notificação do navegador só dispara para "precisa de você" (agente esperando resposta): não existe em trading
+    setHidden(this.noticesGroup, trading);
+    setHidden(this.langHint, trading);
+    setHidden(this.about.el, trading);
+    setHidden(this.bullroomAbout, !trading);
 
     const notif = this.switches.get('browserNotifications')!;
     const state = notificationState();

@@ -1,6 +1,7 @@
 // Ajuda ("?"): legenda de status e ícones, controles, o que o escritório mostra, contas e uso, e o Codex.
 import type { AgentStatus } from '../../../shared/types';
 import type { HelpSection } from './context';
+import { tradingHelpSections, tradingHelpTitle } from './help-trading';
 import { h, iconButton, prefersReducedMotion } from './dom';
 import { ICONS } from './icons';
 import { SHELL_STAGES, STATUS_LABEL } from './model';
@@ -100,11 +101,18 @@ function keys(list: string[]): HTMLElement {
   return h('span', { class: 'ui-keys' }, ...list.map((k) => h('kbd', { class: 'ui-kbd', text: k })));
 }
 
+/** Que ajuda mostrar: a do escritório do habblaud ou a do Bullroom (robôs simulados ou corretoras ao vivo). */
+export type HelpMode = 'office' | 'sim' | 'live';
+
 export class HelpDialog {
   readonly el: HTMLDialogElement;
   private sections = new Map<HelpSection, HTMLElement>();
+  private title: HTMLElement;
+  private body: HTMLElement;
+  private officeSections: HTMLElement[];
+  private shown: HelpMode = 'office';
 
-  constructor() {
+  constructor(private mode: () => HelpMode = () => 'office') {
     const close = iconButton(ICONS.close, tr('Fechar ajuda'), () => this.el.close(), 'ui-icon-btn--sm');
     const statusList = h(
       'ul',
@@ -120,13 +128,8 @@ export class HelpDialog {
     );
     const shortcuts = h('dl', { class: 'ui-shortcuts' }, ...SHORTCUTS.flatMap(([k, text]) => [h('dt', {}, keys(k)), h('dd', { text })]));
 
-    this.el = h(
-      'dialog',
-      { class: 'ui-dialog ui-help', attrs: { 'aria-labelledby': 'ui-help-title' } },
-      h('div', { class: 'ui-dialog__head' }, h('h2', { text: tr('Como ler o escritório'), attrs: { id: 'ui-help-title' } }), close),
-      h(
-        'div',
-        { class: 'ui-dialog__body' },
+    this.title = h('h2', { text: tr('Como ler o escritório'), attrs: { id: 'ui-help-title' } });
+    this.officeSections = [
         h('section', { class: 'ui-help__intro' }, h('p', { text: INTRO })),
         h('section', {}, h('h3', { text: 'Status' }), statusList),
         h('section', {}, h('h3', { text: tr('Atividades') }), iconList),
@@ -160,7 +163,13 @@ export class HelpDialog {
         ),
         this.usageSection(),
         this.codexSection(),
-      ),
+    ];
+    this.body = h('div', { class: 'ui-dialog__body' }, ...this.officeSections);
+    this.el = h(
+      'dialog',
+      { class: 'ui-dialog ui-help', attrs: { 'aria-labelledby': 'ui-help-title' } },
+      h('div', { class: 'ui-dialog__head' }, this.title, close),
+      this.body,
     );
     // Clique no fundo (fora do conteúdo) fecha.
     this.el.addEventListener('click', (e) => {
@@ -169,6 +178,14 @@ export class HelpDialog {
   }
 
   open(section?: HelpSection): void {
+    // Bullroom: nos modos de trading, a ajuda é outra (salas, robôs, corretoras), montada na hora certa.
+    const mode = this.mode();
+    if (mode !== this.shown) {
+      this.shown = mode;
+      this.title.textContent = mode === 'office' ? tr('Como ler o escritório') : tradingHelpTitle();
+      this.body.replaceChildren(...(mode === 'office' ? this.officeSections : tradingHelpSections(mode === 'live')));
+      this.body.scrollTop = 0;
+    }
     if (!this.el.open) this.el.showModal();
     const target = section ? this.sections.get(section) : undefined;
     if (!target) return;
