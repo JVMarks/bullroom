@@ -8,6 +8,19 @@ const bot = (over: Partial<BotTrading> = {}) => ({ trading: { ...T, ...over } })
 const observer = { badge: { value: 0.3, unit: 'bp' } } as AgentInfo;
 const common = { kind: 'main', status: 'working' } as AgentInfo;
 
+describe('rótulos dos robôs do motor de paper', () => {
+  const sim = (over: Partial<BotTrading> = {}): Pick<AgentInfo, 'trading'> => ({ trading: { exchange: 'A + B', pair: 'BTC/USDT', strategy: 'Arbitragem', position: 'flat', pnlUsd: 0, dailyLossLimitUsd: 5, simulated: true, ...over } });
+
+  it('nunca aparece como "zerado": ou espera, ou parou, ou foi ejetado', () => {
+    expect(tradingRoleLabel(sim())).toBe('esperando');
+    expect(tradingRoleLabel(sim({ parked: true }))).toBe('parado');
+    expect(tradingRoleLabel(sim({ ejectedAt: 1 }))).toBe('ejetado');
+    expect(tradingStatusLabel(sim())).toBe('Esperando oportunidade');
+    expect(tradingStatusLabel(sim({ parked: true }))).toBe('Parado: sem saldo');
+    expect(tradingStatusLabel(sim({ ejectedAt: 1 }))).toBe('Ejetado');
+  });
+});
+
 describe('rótulos dos modos de trading', () => {
   it('robô: posição na linha, estado no painel', () => {
     expect(tradingRoleLabel(bot())).toBe('comprado');

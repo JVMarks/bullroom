@@ -22,6 +22,11 @@ export function portfolioLine(p: PortfolioInfo, locale: string): string {
   return tr('{0} · {1} · {2} em operação', [total, bots, p.trading]);
 }
 
+/** "paper +$0,98": sempre em dólar e separado do spread real. Puro (testável). */
+export function paperLine(paper: NonNullable<PortfolioInfo['paper']>, locale: string): string {
+  return tr('paper {0}', [formatValue(paper.pnlUsd, 'usd', locale)]);
+}
+
 /** Corretoras que não estão respondendo, para a dica do topo ("Fora agora: Kraken (timeout)"); vazio = todas ok. Puro. */
 export function sourcesDown(p: PortfolioInfo): string {
   const down = (p.sources ?? []).filter((s) => !s.ok);
@@ -56,21 +61,25 @@ export class PortfolioBar {
   private rest: HTMLElement;
   private canvas: HTMLCanvasElement;
   private badge: HTMLElement;
+  private paper: HTMLElement;
+  private paperValue: HTMLElement;
   private readonly clickable: boolean;
   /** Último estado desenhado no mini-gráfico (princípio da calma: só redesenha quando muda). */
   private drawn = '';
 
   /** `onBadge`: clique no selo SIMULATED / LIVE abre o painel "Mercados". */
   /** `onTotal`: clique no número do topo abre o painel "Spreads" (janelas de 5 min, 1 h e 24 h). */
-  constructor(onBadge?: () => void, onTotal?: () => void) {
+  constructor(onBadge?: () => void, onTotal?: () => void, onPaper?: () => void) {
     this.clickable = !!onBadge;
+    this.paperValue = h('span', { class: 'ui-paper__value' });
+    this.paper = h('button', { class: 'ui-paper', type: 'button', hidden: true, title: tr('Resultado simulado dos robôs. Não soma com o spread real. Clique para abrir o painel Robôs.'), on: onPaper ? { click: onPaper } : {} }, this.paperValue, h('span', { class: 'ui-portfolio__sim ui-paper__sim', text: 'SIMULATED' }));
     this.total = onTotal
       ? h('button', { class: 'ui-portfolio__total', type: 'button', title: tr('Ver o spread de cada sala em 5 min, 1 h e 24 h'), on: { click: onTotal } })
       : h('span', { class: 'ui-portfolio__total' });
     this.rest = h('span', { class: 'ui-portfolio__rest' });
     this.canvas = h('canvas', { class: 'ui-portfolio__spark', attrs: { width: String(SPARK_W * 2), height: String(SPARK_H * 2), 'aria-hidden': 'true' } });
     this.badge = onBadge ? h('button', { class: 'ui-portfolio__sim', type: 'button', on: { click: onBadge } }) : h('span', { class: 'ui-portfolio__sim' });
-    this.el = h('div', { class: 'ui-portfolio', role: 'status', attrs: { 'aria-live': 'polite' }, hidden: true }, this.total, this.rest, this.canvas, this.badge);
+    this.el = h('div', { class: 'ui-portfolio', role: 'status', attrs: { 'aria-live': 'polite' }, hidden: true }, this.total, this.rest, this.canvas, this.badge, this.paper);
   }
 
   render(p: PortfolioInfo | undefined): void {
@@ -92,6 +101,11 @@ export class PortfolioBar {
         : tr('Carteira: {0}. Ejetados hoje: {1}.', [portfolioLine(p, locale), p.ejected]),
     );
     this.drawSpark(p.series);
+    setHidden(this.paper, !p.paper);
+    if (p.paper) {
+      setText(this.paperValue, paperLine(p.paper, locale));
+      this.paperValue.style.color = TONE_COLOR[pnlTone(p.paper.pnlUsd)];
+    }
   }
 
   private drawSpark(series: PortfolioInfo['series']): void {

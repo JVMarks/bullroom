@@ -6,6 +6,7 @@ import { formatPnl, pnlTone } from '../../../shared/trading/rules';
 import { changeOver, hodlPnl } from '../../../shared/trading/stats';
 import { intlLocale, tr } from '../../../shared/i18n';
 import { h, setHidden, setText } from './dom';
+import { tradingRoleLabel } from './trading-labels';
 
 export type BotWindow = '5m' | '1h' | '24h';
 const WINDOWS: readonly BotWindow[] = ['5m', '1h', '24h'];
@@ -33,6 +34,10 @@ export function botCardModel(t: BotTrading, win: BotWindow, now: number, locale:
   const vs = Math.round((t.pnlUsd - hodl) * 100) / 100;
   const trades = s?.trades ?? 0;
   const pct = (n: number) => `${Math.round(n)}%`;
+  // O limite olha o PL do dia; nos robôs do motor de paper, `pnlUsd` é o acumulado.
+  const today = t.pnlTodayUsd ?? t.pnlUsd;
+  // Robô do motor de paper: sem preço de BTC, não há o que comparar.
+  const noBtc = !!t.simulated && !(s?.btcStartUsd && s.btcStartUsd > 0);
   return {
     pnl: formatPnl(t.pnlUsd, locale),
     tone: pnlTone(t.pnlUsd),
@@ -41,9 +46,9 @@ export function botCardModel(t: BotTrading, win: BotWindow, now: number, locale:
     winRate: pct(trades ? ((s?.wins ?? 0) / trades) * 100 : 0),
     trades: String(trades),
     drawdown: formatPnl(-(s?.maxDrawdownUsd ?? 0), locale),
-    limitUsed: pct(t.pnlUsd < 0 && t.dailyLossLimitUsd > 0 ? Math.min(100, (-t.pnlUsd / t.dailyLossLimitUsd) * 100) : 0),
-    vsBtc: formatPnl(vs, locale),
-    vsBtcTone: pnlTone(vs),
+    limitUsed: pct(today < 0 && t.dailyLossLimitUsd > 0 ? Math.min(100, (-today / t.dailyLossLimitUsd) * 100) : 0),
+    vsBtc: noBtc ? '—' : formatPnl(vs, locale),
+    vsBtcTone: noBtc ? 'zero' : pnlTone(vs),
   };
 }
 
@@ -100,7 +105,7 @@ export class BotCard {
     setHidden(this.el, !t);
     if (!t) return;
     const m = botCardModel(t, this.win, now, intlLocale());
-    const pos = t.position === 'long' ? tr('comprado') : t.position === 'short' ? tr('vendido') : tr('zerado');
+    const pos = tradingRoleLabel(a) ?? '';
     setText(this.where, `${t.exchange} · ${t.pair} · ${t.strategy} · ${pos}`);
     setText(this.pnl, m.pnl);
     this.pnl.style.color = TONE_COLOR[m.tone];

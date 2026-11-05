@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { portfolioLine, sourcesDown, sparkPoints, transferNote } from './portfolio';
+import { paperLine, portfolioLine, sourcesDown, sparkPoints, transferNote } from './portfolio';
 
 const P = { simulated: true, totalPnlUsd: 33.96, bots: 54, trading: 25, ejected: 2, series: [] };
+
+describe('resultado paper no topo', () => {
+  it('sempre em dólar, marcado como paper', () => {
+    const line = paperLine({ pnlUsd: 0.98, bots: 2, trading: 1, ejected: 0 }, 'pt-BR');
+    expect(line).toContain('paper');
+    expect(line).toContain('0,98');
+    expect(line).toContain('$');
+    expect(paperLine({ pnlUsd: -3, bots: 1, trading: 0, ejected: 1 }, 'pt-BR')).toContain('-');
+  });
+});
 
 describe('carteira na barra do topo (Bullroom)', () => {
   it('linha com PL total, robôs e em operação', () => {

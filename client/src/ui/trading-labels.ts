@@ -10,6 +10,7 @@ export function tradingRoleLabel(a: Who): string | null {
   const t = a.trading;
   if (t) {
     if (t.ejectedAt !== undefined) return tr('ejetado');
+    if (t.simulated) return t.parked ? tr('parado') : tr('esperando');
     return t.position === 'long' ? tr('comprado') : t.position === 'short' ? tr('vendido') : tr('zerado');
   }
   if (a.wallet) return tr('carteira');
@@ -21,6 +22,7 @@ export function tradingStatusLabel(a: Who): string | null {
   const t = a.trading;
   if (t) {
     if (t.ejectedAt !== undefined) return tr('Ejetado');
+    if (t.simulated) return t.parked ? tr('Parado: sem saldo') : tr('Esperando oportunidade');
     return t.position === 'flat' ? tr('Zerado') : tr('Operando');
   }
   if (a.wallet) return a.wallet.chain === 'bitcoin' ? tr('Ao vivo') : a.wallet.open ? tr('Posição aberta') : tr('Zerada');

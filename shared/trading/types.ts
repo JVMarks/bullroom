@@ -16,8 +16,14 @@ export interface BotTrading {
   /** Nome da estratégia (ex.: "Spread"). */
   strategy: string;
   position: BotPosition;
-  /** PL do dia em dólares. */
+  /** PL em dólares: do dia nos robôs do simulador; acumulado nos do motor de paper (ver `pnlTodayUsd`). */
   pnlUsd: number;
+  /** Motor de paper: robô simulado sobre o livro real. Nunca aparece junto de dado ao vivo sem esta marca. */
+  simulated?: true;
+  /** Motor de paper: PL do dia, que é o que o limite de perda olha. */
+  pnlTodayUsd?: number;
+  /** Motor de paper: parado por falta de saldo em uma das corretoras. */
+  parked?: true;
   /** Perda diária máxima (positivo): ao chegar a -limite, o robô é ejetado. */
   dailyLossLimitUsd: number;
   /** Epoch ms da ejeção. Presente = ejetado (não volta a operar no dia). */
@@ -70,6 +76,8 @@ export interface PortfolioInfo {
   sources?: Array<{ id: string; name: string; ok: boolean; error?: string }>;
   /** Ao vivo: em quantas salas o líquido já inclui o saque, de quantas, e o tamanho da operação usado. */
   transfer?: { included: number; total: number; sizeUsd: number };
+  /** Ao vivo com o motor de paper: resultado simulado, em dólar. Nunca soma com `totalPnlUsd`. Robôs parados pelo usuário só contam no PL. */
+  paper?: { pnlUsd: number; bots: number; trading: number; ejected: number };
 }
 
 export type PnlTone = 'gain' | 'loss' | 'zero';

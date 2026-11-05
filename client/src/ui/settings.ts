@@ -265,6 +265,27 @@ export class SettingsPopover implements UiComponent {
           },
         }),
       ),
+      h(
+        'div',
+        { class: 'ui-set' },
+        h(
+          'div',
+          { class: 'ui-set__text' },
+          h('span', { class: 'ui-set__label', text: tr('Robôs') }),
+          h('span', { class: 'ui-set__hint', text: tr('Motor de paper: robôs simulados sobre o livro real, com trava de risco. Nenhuma ordem de verdade.') }),
+        ),
+        h('button', {
+          class: 'ui-btn',
+          type: 'button',
+          text: tr('Abrir'),
+          on: {
+            click: () => {
+              this.hide();
+              ctx.toggleRobots(true);
+            },
+          },
+        }),
+      ),
     );
 
     this.logoutBtn = h('button', { class: 'ui-btn', type: 'button', text: tr('Sair'), on: { click: () => void this.logout() } }) as HTMLButtonElement;

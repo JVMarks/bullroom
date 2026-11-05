@@ -27,6 +27,33 @@ const bot = (over: Partial<BotTrading> = {}): BotTrading => ({
   ...over,
 });
 
+describe('cartão de robô do motor de paper', () => {
+  const t = (over: Partial<BotTrading> = {}): BotTrading => ({
+    exchange: 'A + B',
+    pair: 'BTC/USDT',
+    strategy: 'Arbitragem',
+    position: 'flat',
+    pnlUsd: 10,
+    pnlTodayUsd: -2.5,
+    simulated: true,
+    dailyLossLimitUsd: 5,
+    capitalUsd: 200,
+    stats: { trades: 2, wins: 1, peakPnlUsd: 12, maxDrawdownUsd: 2, series: [], btcStartUsd: 0, btcNowUsd: 0 },
+    ...over,
+  });
+
+  it('o limite usado olha o PL do dia, não o acumulado', () => {
+    expect(botCardModel(t(), '1h', 0, 'pt-BR').limitUsed).toBe('50%');
+    expect(botCardModel(t({ pnlTodayUsd: 1 }), '1h', 0, 'pt-BR').limitUsed).toBe('0%');
+  });
+
+  it('sem preço de BTC, não inventa a comparação', () => {
+    const m = botCardModel(t(), '1h', 0, 'pt-BR');
+    expect(m.vsBtc).toBe('—');
+    expect(m.vsBtcTone).toBe('zero');
+  });
+});
+
 describe('cartão do robô (Bullroom)', () => {
   it('acerto, trades, drawdown e variação na janela', () => {
     const m = botCardModel(bot(), '5m', NOW, 'pt-BR');

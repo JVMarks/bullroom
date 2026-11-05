@@ -12031,3 +12031,55 @@ button.ui-portfolio__total:focus-visible {
 .ui-mk__event-text {
   flex: 1;
 }
+
+/* Bullroom: painel Robôs e resultado paper no topo (motor de paper do OpenSpread). */
+.ui-paper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, #a78bfa 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, #a78bfa 10%, transparent);
+  color: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ui-paper[hidden] { display: none; }
+.ui-paper:hover { background: color-mix(in srgb, #a78bfa 20%, transparent); }
+.ui-paper .ui-portfolio__sim { color: #2a1650; background: #c4b5fd; border-color: transparent; cursor: pointer; }
+.ui-rb__title { margin: 0 0 6px; }
+.ui-rb__title .ui-portfolio__sim { color: #2a1650; background: #c4b5fd; border-color: transparent; }
+.ui-rb__main, .ui-rb__off { display: flex; flex-direction: column; gap: 8px; }
+.ui-rb__main[hidden], .ui-rb__off[hidden] { display: none; }
+.ui-rb__line { margin: 0; font-size: 12px; }
+.ui-rb__list { display: flex; flex-direction: column; gap: 8px; }
+.ui-rb__bot { display: flex; flex-direction: column; gap: 3px; padding: 8px; border: 1px solid var(--ui-border, #2b3342); border-radius: var(--radius-sm); font-size: 12px; }
+.ui-rb__bot .ui-btn { align-self: flex-start; margin-top: 4px; }
+.ui-rb__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 2px; }
+.ui-rb__pill { flex: none; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.ui-rb__pill.is-run { background: #14532d; color: #86efac; }
+.ui-rb__pill.is-park { background: #713f12; color: #fde68a; }
+.ui-rb__pill.is-out { background: #4b1d1d; color: #fecaca; }
+.ui-rb__kv { display: flex; justify-content: space-between; gap: 8px; }
+.ui-rb__kv > span:first-child { opacity: 0.7; }
+.ui-rb__kv > span:last-child { text-align: right; }
+.ui-rb__kv .is-gain { color: #4ade80; }
+.ui-rb__kv .is-loss { color: #f87171; }
+.ui-rb__note { margin: 4px 0 0; padding: 5px 7px; border: 1px solid #5b4a1a; border-radius: var(--radius-sm); background: #2a2413; color: #fde68a; font-size: 11.5px; }
+.ui-rb__pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ui-rb__hint { margin: 0; font-size: 11.5px; opacity: 0.8; }
+.ui-rb__hint.is-low { color: #f87171; opacity: 1; }
+.ui-rb__field { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+.ui-rb__field-in { display: inline-flex; align-items: center; gap: 4px; }
+.ui-rb__num { width: 84px; }
+.ui-rb__main > .ui-btn { align-self: flex-start; }
+.ui-rb__more { font-size: 12px; }
+.ui-rb__more > summary { cursor: pointer; margin-bottom: 6px; }
+.ui-rb__more .ui-rb__field { margin-bottom: 6px; }
+.ui-rb__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ui-rb__warn { margin: 4px 0 0; font-size: 11px; opacity: 0.7; }
+.ui-rb__message { margin: 0 0 6px; font-size: 12px; color: #86efac; }
+.ui-rb__message.is-error { color: #f87171; }

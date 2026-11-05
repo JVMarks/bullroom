@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CORE_BASE, coreConfigApi } from './core-config';
+import { CORE_BASE, coreConfigApi, coreEngineApi } from './core-config';
 
 const CONFIG = { exchanges: ['binance', 'okx'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } };
 
@@ -10,6 +10,34 @@ function fakeFetch(status: number, body: unknown, calls: Array<{ url: string; in
     return new Response(body === undefined ? 'x' : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   };
 }
+
+describe('robôs do motor de paper (cliente)', () => {
+  const BODY = { pair: 'BTC/USDT', exchanges: ['a', 'b'] as [string, string] };
+
+  it('liga com POST e JSON e para pelo id', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const api = coreEngineApi(fakeFetch(201, { id: 'bot-1' }, calls));
+    expect(await api.start(BODY)).toEqual({ ok: true, value: { id: 'bot-1' } });
+    await api.stop('bot-1');
+    expect(calls[0].url).toBe(`${CORE_BASE}/v1/engine/bots`);
+    expect(calls[0].init?.method).toBe('POST');
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual(BODY);
+    expect(calls[1].url).toBe(`${CORE_BASE}/v1/engine/bots/bot-1/stop`);
+    expect(calls[1].init?.method).toBe('POST');
+  });
+
+  it('recusa da trava chega com o motivo e o que fazer', async () => {
+    const api = coreEngineApi(fakeFetch(422, { error: 'blocked', reasons: [{ code: 'no_price', message: 'Sem cotação.', fix: 'Espere.' }] }));
+    expect(await api.start(BODY)).toEqual({ ok: false, kind: 'invalid', details: ['Sem cotação. Espere.'] });
+  });
+
+  it('núcleo fora do ar', async () => {
+    const api = coreEngineApi(async () => {
+      throw new Error('recusado');
+    });
+    expect(await api.start(BODY)).toEqual({ ok: false, kind: 'offline', details: [] });
+  });
+});
 
 describe('configuração do núcleo (cliente)', () => {
   it('GET /v1/config sem cache e PUT /v1/config com JSON', async () => {

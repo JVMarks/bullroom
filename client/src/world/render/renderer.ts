@@ -180,7 +180,8 @@ export class Renderer {
       this.occupiedSlots.add(room.slot);
       const cur = this.areas.get(room.id);
       if (!cur || cur.layout !== room.layout || cur.version !== room.version || assetsChanged) {
-        this.areas.set(room.id, buildAreaVis(this.art, room.layout, room, this.assets, theme));
+        // A sala de simulação fica fora do tema da época: a cor dela é o aviso de que nada ali é real.
+        this.areas.set(room.id, buildAreaVis(this.art, room.layout, room, this.assets, room.info.simulation ? 'none' : theme));
       } else cur.room = room;
     }
     for (const [id, vis] of this.areas) if (vis.room && !vis.room.present) this.areas.delete(id);
@@ -517,7 +518,7 @@ export class Renderer {
       for (const vis of this.areas.values()) {
         if (vis.room && vis.room.phase !== 'ready') continue;
         if (!visible(vis.px.x, vis.px.y, vis.px.w, vis.px.h)) continue;
-        drawSeasonalLights(ctx, this.theme, vis.layout, vis.room ? vis.room.light(now) : 1, this.wallScreenSpans(vis));
+        if (!vis.room?.info.simulation) drawSeasonalLights(ctx, this.theme, vis.layout, vis.room ? vis.room.light(now) : 1, this.wallScreenSpans(vis));
       }
     }
     // giroflex e balão "!" do alarme de CI (brilham também no escuro)
@@ -796,7 +797,7 @@ export class Renderer {
     const state = this.furnState(f, now);
     const fs = furnitureSprites(this.art, f, state);
     if (!fs) return;
-    const s = front ? fs.front : seasonalFurniture(this.theme, f.kind, area.layout, f.seed) ?? fs.base;
+    const s = front ? fs.front : (area.room?.info.simulation ? null : seasonalFurniture(this.theme, f.kind, area.layout, f.seed)) ?? fs.base;
     if (!s) return;
     const dx = Math.round(f.ax - s.ax);
     const dy = Math.round(f.ay - s.ay);

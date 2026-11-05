@@ -17,6 +17,11 @@ const THEMES: readonly RoomTheme[] = [
 
 export const THEME_COUNT = THEMES.length;
 
+/** Sala de simulação (motor de paper): roxo forte, que nenhuma sala comum usa. A cor é o aviso de que nada ali é real. */
+export function simulationTheme(): RoomTheme {
+  return { carpet: '#a78bea', carpet2: '#9a7ce3', wall: { base: '#e4d9fb', trim: '#6d4cc0', pattern: 'plain' }, accent: '#8b5cf6', deskVariant: 'white', chairVariant: 'gray' };
+}
+
 export function roomTheme(seed: number): RoomTheme {
   const n = THEMES.length;
   const t = THEMES[((Math.floor(seed) % n) + n) % n];

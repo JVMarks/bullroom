@@ -4,7 +4,7 @@ import type { AgentInfo, FeedItem, Notice, OfficeSnapshot, RoomInfo } from '../t
 import { hash32 } from '../hash';
 import { intlLocale, tr } from '../i18n';
 import type { ValueUnit } from '../trading/types';
-import type { AgendaEvent, CoreState, MachineSource, SpreadOpportunity, WalletChain, WalletState } from './types';
+import type { AgendaEvent, CoreState, EngineBot, EngineState, MachineSource, SpreadOpportunity, WalletChain, WalletState } from './types';
 import type { RoomEffect } from '../types';
 
 /** Líquido que vale para a sala: com o saque quando o núcleo conseguiu estimar (mesma regra de core/src/transfer.ts). */
@@ -52,6 +52,8 @@ export function exchangeName(id: string): string {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+/** Soma de PL sem o ruído do ponto flutuante, para a série não crescer por uma diferença que ninguém vê. */
+const round2Exact = (n: number): number => Math.round(n * 1e6) / 1e6;
 
 /** Nome exibido de cada rede. */
 export const CHAIN_NAMES: Readonly<Record<WalletChain, string>> = { solana: 'Solana', ethereum: 'Ethereum', base: 'Base', bitcoin: 'Bitcoin' };
@@ -76,6 +78,21 @@ export function agendaAlarm(events: readonly AgendaEvent[], pair: string, now: n
 
 /** Id da sala de máquinas. */
 export const MACHINES_ROOM_ID = 'core:machines';
+
+/** Id da sala de simulação (robôs do motor de paper) e o de cada robô. */
+export const SIMULATION_ROOM_ID = 'core:simulation';
+export const engineBotAgentId = (botId: string): string => `core:bot:${botId}`;
+/** Semente do tema roxo (art/theme.ts): a cor da sala já diz que nada ali é real. */
+const SIMULATION_SEED = 3;
+
+/** Parado por saldo continua sentado: um robô circulando levaria o número simulado para fora da sala roxa. */
+const ENGINE_STATUS = { running: 'working', parked: 'working', ejected: 'offline' } as const;
+
+/** Nome da sala: o selo vai junto, para a placa da parede também avisar. */
+export const simulationRoomName = (): string => `${tr('Simulação')} · SIMULATED`;
+
+/** "+US$ 0,50": sempre em dólar. */
+const paperMoney = (n: number): string => `${n < 0 ? '-' : '+'}US$ ${new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n))}`;
 
 /** LED do rack: fora, recuando ou quase no limite (80%), ou ok. Mesma regra de core/src/machine.ts (sourceLevel). */
 export function sourceLevel(s: MachineSource, now: number): 'ok' | 'warn' | 'down' {
@@ -123,6 +140,13 @@ export class CoreOffice {
   /** Alertas já vistos (por id) e se o primeiro estado já chegou. */
   private seenAlerts = new Set<string>();
   private alertsPrimed = false;
+  /** Robôs do motor: série da sala, série e hora da ejeção de cada robô. */
+  private paperSeries: Array<{ at: number; pnlUsd: number }> = [];
+  private botSeries = new Map<string, Array<{ at: number; pnlUsd: number }>>();
+  private ejectedAt = new Map<string, number>();
+  /** Feed: operações e ejeções já vistas; `null` até o primeiro estado (o que já existia não vira linha nova). */
+  private seenFills: Set<string> | null = null;
+  private seenEjected = new Set<string>();
 
   constructor(private startedAt = Date.now()) {}
 
@@ -169,6 +193,7 @@ export class CoreOffice {
         });
       });
     });
+    const paper = this.addSimulationRoom(state.engine, state.at, rooms, agents);
     // Carteiras on-chain: uma sala por rede, depois das salas de par; cada carteira é um personagem (sentado com
     // posição aberta, circulando zerado). Nada de feed nem aviso: a sala só se mexe.
     const wallets = state.wallets?.wallets ?? [];
@@ -241,9 +266,117 @@ export class CoreOffice {
         series: this.total.map((x) => ({ ...x })),
         ...(sizeUsd !== undefined ? { transfer: { included, total: withBest.length, sizeUsd } } : {}),
         sources: state.exchanges.map((e) => ({ id: e.id, name: exchangeName(e.id), ok: e.ok, ...(e.ok || !e.error ? {} : { error: e.error }) })),
+        ...(paper ? { paper } : {}),
       },
       meta: { demo: false, sources: [], startedAt: this.startedAt, version: 'core' },
     };
+  }
+
+  /**
+   * Sala de simulação: uma só, com todos os robôs do motor de paper e o PL em dólar. A placa soma também os robôs parados,
+   * para parar não apagar resultado. Sem robô ativo, a sala sai do prédio. Devolve o resumo do topo.
+   */
+  private addSimulationRoom(engine: EngineState | undefined, at: number, rooms: RoomInfo[], agents: AgentInfo[]): NonNullable<OfficeSnapshot['portfolio']>['paper'] {
+    if (!engine) return undefined;
+    const total = round2Exact(engine.bots.reduce((s, b) => s + b.pnlUsd, 0));
+    const shown = engine.bots.filter((b) => b.status !== 'stopped');
+    const summary = { pnlUsd: total, bots: shown.length, trading: shown.filter((b) => b.status === 'running').length, ejected: shown.filter((b) => b.status === 'ejected').length };
+    if (!shown.length) return summary;
+    if (this.paperSeries[this.paperSeries.length - 1]?.pnlUsd !== total) this.paperSeries.push({ at, pnlUsd: total });
+    if (this.paperSeries.length > SERIES_MAX) this.paperSeries.splice(0, this.paperSeries.length - SERIES_MAX);
+    rooms.push({
+      id: SIMULATION_ROOM_ID,
+      name: simulationRoomName(),
+      path: 'openspread://simulation',
+      slot: rooms.length,
+      seed: SIMULATION_SEED,
+      createdAt: this.startedAt,
+      simulation: true,
+      trading: { pnlUsd: total, unit: 'usd', series: this.paperSeries.map((x) => ({ ...x })) },
+    });
+    for (const b of shown) agents.push(this.botAgent(b, engine, at));
+    return summary;
+  }
+
+  private botAgent(b: EngineBot, engine: EngineState, at: number): AgentInfo {
+    const id = engineBotAgentId(b.id);
+    const series = this.botSeries.get(b.id) ?? [];
+    if (series[series.length - 1]?.pnlUsd !== b.pnlUsd) series.push({ at, pnlUsd: b.pnlUsd });
+    if (series.length > SERIES_MAX) series.splice(0, series.length - SERIES_MAX);
+    this.botSeries.set(b.id, series);
+    if (b.status === 'ejected' && !this.ejectedAt.has(b.id)) this.ejectedAt.set(b.id, at);
+    const names = b.exchanges.map(exchangeName).join(' + ');
+    const ejectedAt = b.status === 'ejected' ? this.ejectedAt.get(b.id) : undefined;
+    const last = engine.fills.find((f) => f.botId === b.id);
+    return {
+      id,
+      kind: 'main',
+      roomId: SIMULATION_ROOM_ID,
+      name: b.pair.split('/')[0],
+      look: hash32(b.id) % 2 ? 'f' : 'm',
+      role: tr('Robô · {0}', [b.pair]),
+      title: names,
+      sessionId: id,
+      account: 'core',
+      status: ENGINE_STATUS[b.status as keyof typeof ENGINE_STATUS],
+      ...(last ? { activity: { id: `core-fill:${last.id}`, kind: 'other' as const, icon: last.pnlUsd < 0 ? '🔻' : '✅', text: tr('Última operação: {0}', [paperMoney(last.pnlUsd)]), at: last.at } } : {}),
+      recent: [],
+      tasks: [],
+      startedAt: b.startedAt,
+      lastEventAt: at,
+      statusSince: b.startedAt,
+      stats: { toolCalls: 0, tokensIn: 0, tokensOut: 0, subagents: 0 },
+      seed: hash32(b.id),
+      trading: {
+        exchange: names,
+        pair: b.pair,
+        strategy: tr('Arbitragem'),
+        position: 'flat',
+        pnlUsd: b.pnlUsd,
+        pnlTodayUsd: b.pnlTodayUsd,
+        simulated: true,
+        ...(b.status === 'parked' ? { parked: true as const } : {}),
+        dailyLossLimitUsd: engine.dailyLossLimitUsd,
+        ...(ejectedAt !== undefined ? { ejectedAt } : {}),
+        capitalUsd: b.capitalUsd,
+        // Sem preço de BTC garantido no estado: a comparação com segurar BTC fica zerada, e o cartão mostra "—".
+        stats: { trades: b.trades, wins: b.wins, peakPnlUsd: Math.max(0, ...series.map((p) => p.pnlUsd)), maxDrawdownUsd: b.maxDrawdownUsd, series: series.map((p) => ({ ...p })), btcStartUsd: 0, btcNowUsd: 0 },
+      },
+    };
+  }
+
+  /** Linhas do feed dos robôs: operação nova e ejeção. Ficar parado ou recusado não entra (calma). */
+  private engineFeed(state: CoreState): FeedItem[] {
+    const engine = state.engine;
+    if (!engine) return [];
+    const first = this.seenFills === null;
+    const seen = (this.seenFills ??= new Set());
+    const out: FeedItem[] = [];
+    const room = simulationRoomName();
+    const pct = (n: number) => `${new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}%`;
+    const name = (pair: string) => pair.split('/')[0];
+    for (const f of [...engine.fills].reverse()) {
+      if (seen.has(f.id)) continue;
+      seen.add(f.id);
+      if (first) continue;
+      const activity = {
+        id: `core-fill:${f.id}`,
+        kind: 'other' as const,
+        icon: f.pnlUsd < 0 ? '🔻' : '✅',
+        text: tr('Operação simulada em {0}: {1}', [f.pair, paperMoney(f.pnlUsd)]),
+        detail: tr('{0} → {1} · cotado {2}, realizado {3}', [exchangeName(f.buyOn), exchangeName(f.sellOn), pct(f.quotedNetPct), pct(f.realizedNetPct)]),
+        at: f.at,
+      };
+      out.push({ id: activity.id, agentId: engineBotAgentId(f.botId), roomId: SIMULATION_ROOM_ID, agentName: name(f.pair), roomName: room, activity });
+    }
+    for (const b of engine.bots) {
+      if (b.status !== 'ejected' || this.seenEjected.has(b.id)) continue;
+      this.seenEjected.add(b.id);
+      if (first) continue;
+      const activity = { id: `core-eject:${b.id}:${state.at}`, kind: 'other' as const, icon: '🛑', text: tr('Robô simulado de {0} ejetado', [b.pair]), detail: b.statusReason ?? '', at: state.at };
+      out.push({ id: activity.id, agentId: engineBotAgentId(b.id), roomId: SIMULATION_ROOM_ID, agentName: name(b.pair), roomName: room, activity });
+    }
+    return out;
   }
 
   /**
@@ -276,7 +409,7 @@ export class CoreOffice {
    * ROUTE_STABLE leituras seguidas e no máximo uma vez a cada ROUTE_GAP_MS por par.
    */
   feed(state: CoreState): FeedItem[] {
-    const out: FeedItem[] = [];
+    const out: FeedItem[] = this.engineFeed(state);
     const pct = (n: number) => `${n > 0 ? '+' : ''}${new Intl.NumberFormat(intlLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}%`;
     for (const p of state.pairs) {
       if (!p.best) continue;

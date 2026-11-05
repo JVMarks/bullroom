@@ -530,7 +530,8 @@ export class Overlay {
       const anim = room ? buildAnim(room.phase, room.progress(now)) : null;
       // texto da placa quando ela fica grande o bastante para ler; senão, o nome flutuante
       const rect = this.renderer.signRect(vis);
-      const text = room ? room.info.name : vis.id === 'core:recepcao' ? 'Bullroom' : null;
+      // Sala de simulação: a placa diz só o selo, que não pode sair cortado.
+      const text = room ? (room.info.simulation ? 'SIMULATED' : room.info.name) : vis.id === 'core:recepcao' ? 'Bullroom' : null;
       const readable = !!rect && rect.h * zoom >= SIGN_MIN_PX;
       if (readable && rect && text && (!anim || anim.sign >= 1)) {
         const ax = this.sx(rect.x);
@@ -549,7 +550,7 @@ export class Overlay {
       if (room) {
         // endereço antigo de uma mudança: o nome já está na sala nova
         if (!room.present || room.ghost || (anim && anim.walls < 0.6)) continue;
-        this.drawRoomPill(room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd, room.info.trading?.unit, pnlIntensity(room.info.trading?.pnlUsd, this.pnlMaxAbs()));
+        this.drawRoomPill(room.info.simulation ? 'SIMULATED' : room.info.name, cx, cy, colW - 8, room.accounts, this.countIn(room.id), room.theme.accent, room.lightOn, room.info.trading?.pnlUsd, room.info.trading?.unit, room.info.simulation ? 0 : pnlIntensity(room.info.trading?.pnlUsd, this.pnlMaxAbs()));
       } else if (CORE_NAMES[vis.id]) {
         this.drawCorePill(CORE_NAMES[vis.id], cx, cy, colW - 8);
       }
@@ -579,12 +580,15 @@ export class Overlay {
     return t > 0.55 ? '#f3f5fa' : color;
   }
 
-  /** Maior |PL| entre as salas de trading presentes (escala da intensidade das placas). */
+  /**
+   * Maior |PL| entre as salas de trading presentes (escala da intensidade das placas). A sala de simulação fica fora: o
+   * PL dela é em dólar, e compará-lo com spread em % mudaria a cor das placas reais por causa de um número simulado.
+   */
   private pnlMaxAbs(): number {
     let m = 0;
     for (const r of this.sim.rooms.values()) {
       const p = r.info.trading?.pnlUsd;
-      if (p !== undefined && r.present) m = Math.max(m, Math.abs(p));
+      if (p !== undefined && r.present && !r.info.simulation) m = Math.max(m, Math.abs(p));
     }
     return m;
   }

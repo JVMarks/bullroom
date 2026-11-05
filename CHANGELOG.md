@@ -12,6 +12,12 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Motor de paper e sala de simulação (`?source=core`).** Painel "Robôs" (Configurações › Robôs, ou o chip `paper` no
+  topo): liga robôs de arbitragem simulados sobre o livro de ofertas real, com trava de risco a cada oportunidade, capital
+  por robô e limite de perda diária. Nenhuma chave, nenhuma ordem de verdade. Todos os robôs ficam numa única sala roxa com
+  o selo SIMULATED, fora do tema da época; o resultado é em dólar e nunca soma com o spread real do topo. O painel mostra
+  o motivo de cada parada, quantas leituras ficaram acima do mínimo e o líquido cotado contra o realizado. Sem backtest de
+  arbitragem, e a falha de uma perna só não é simulada: os dois limites aparecem no painel.
 - **Agenda e radar (`?source=core`).** Painel "Agenda" (Configurações › Mercados): os próximos 14 dias com cor de
   impacto e hora no seu fuso (FOMC e CPI com as datas oficiais do Fed e do BLS, mais os seus eventos) e o radar de
   manchetes dos feeds RSS que você escolher, com o que é novo desde a última olhada e a sala que cada manchete cita.

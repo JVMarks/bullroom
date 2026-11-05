@@ -89,6 +89,6 @@ export class BubblesView {
         : basis === 'pnl'
           ? tr('Os robôs têm o mesmo capital, então o tamanho é o do PL: quem mais ganha ou perde fica maior. Cor = PL.')
           : tr('Tamanho = vendas fechadas em 7 dias · cor = resultado realizado na moeda da rede. Bitcoin não entra (sem troca na rede).');
-    this.body.replaceChildren(root, h('p', { class: 'ui-mk__hint', text: legend }), ...(this.ctx.store.core ? [] : [h('p', { class: 'ui-mk__hint', text: tr('Dados simulados.') })]));
+    this.body.replaceChildren(root, h('p', { class: 'ui-mk__hint', text: legend }), ...(!this.ctx.store.core || (snap?.agents ?? []).some((a) => a.trading?.simulated) ? [h('p', { class: 'ui-mk__hint', text: tr('Dados simulados.') })] : []));
   }
 }

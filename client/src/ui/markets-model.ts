@@ -1,5 +1,5 @@
 // Bullroom: regras do painel "Mercados" (corretoras e pares do OpenSpread). Puro (testável): sem DOM e sem rede.
-import type { CheckResult, ConfigLimits, CoreConfig, SpreadOpportunity, WalletChain } from '../../../shared/core/types';
+import type { CheckResult, ConfigLimits, CoreConfig, EngineConfig, SpreadOpportunity, WalletChain } from '../../../shared/core/types';
 import { exchangeName } from '../../../shared/core/to-office';
 import { tr } from '../../../shared/i18n';
 
@@ -146,6 +146,7 @@ export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
   const events = (c: CoreConfig) => (c.events ?? []).map((e) => [e.title, e.at, e.impact, ...(e.pairs ?? [])].join('|'));
   const radar = (c: CoreConfig) => (c.radar ? [...c.radar.feeds, '#', ...c.radar.keywords] : []);
   return (
+    JSON.stringify(a.engine ?? null) === JSON.stringify(b.engine ?? null) &&
     eq(a.exchanges, b.exchanges) &&
     eq(a.pairs, b.pairs) &&
     a.pollMs === b.pollMs &&
@@ -156,6 +157,15 @@ export function sameConfig(a: CoreConfig, b: CoreConfig): boolean {
     eq(events(a), events(b)) &&
     eq(radar(a), radar(b))
   );
+}
+
+/**
+ * Copia o motor para o config que vai ser salvo. Par que saiu da lista também sai dos permitidos: só reduz o que pode
+ * operar, e sem isso tirar um par em Mercados daria erro de validação por causa de outro painel. Puro.
+ */
+export function engineFor(engine: EngineConfig | undefined, pairs: readonly string[]): EngineConfig | undefined {
+  if (!engine) return undefined;
+  return { ...engine, policy: { ...engine.policy, allowedPairs: engine.policy.allowedPairs.filter((p) => pairs.includes(p)) } };
 }
 
 /**

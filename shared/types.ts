@@ -219,6 +219,8 @@ export interface RoomInfo {
   trading?: RoomTrading;
   /** Bullroom: sala de máquinas do núcleo do OpenSpread (um rack por fonte e a saúde do núcleo). Ausente = sala comum. */
   machines?: RoomMachines;
+  /** Bullroom: sala de simulação do motor de paper. Tudo nela é simulado, e o PL dela é em dólar. */
+  simulation?: true;
 }
 
 /** Sala de máquinas: CPU e memória do núcleo, a série da CPU (no telão) e um rack por fonte, na ordem dos racks. */

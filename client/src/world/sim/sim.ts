@@ -3,6 +3,7 @@
 import { partsKey } from '../../../../shared/appearance';
 import type { AgentInfo, OfficeSnapshot, Provider, RoomInfo } from '../../../../shared/types';
 import type { ArtModule, Dir, RoomTheme } from '../../art/api';
+import { simulationTheme } from '../../art/theme';
 import type { WorldOptions } from '../api';
 import { COL_W, COMPACT_DELAY_MS, DISMANTLE_DELAY_MS, FOOT_DX, FOOT_DY, MISSING_DEBOUNCE_MS, RUN_SPEED, TILE, WALK_SPEED } from '../constants';
 import { assembleBuilding, type BuildingLayout } from '../layout/building';
@@ -253,7 +254,7 @@ export class Sim {
   private createRoom(r: RoomInfo, first: boolean, now: number): RoomState {
     let theme = FALLBACK_THEME;
     try {
-      theme = this.art.roomTheme(r.seed) ?? FALLBACK_THEME;
+      theme = r.simulation ? simulationTheme() : (this.art.roomTheme(r.seed) ?? FALLBACK_THEME);
     } catch {
       theme = FALLBACK_THEME;
     }

@@ -10,7 +10,7 @@ import { coreConfigApi, type CoreConfigApi, type CoreFailure } from '../net/core
 import type { UiContext } from './context';
 import { h, iconButton, setHidden, setText } from './dom';
 import { ICONS } from './icons';
-import { draftProblems, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, localToIso, normalizeWallet, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine, walletKind } from './markets-model';
+import { draftProblems, engineFor, feeRows, formatFee, normalizePair, parseAlertPct, parseAmount, localToIso, normalizeWallet, roomSummary, sameConfig, searchExchanges, SUGGESTED_PAIRS, transferLine, walletKind } from './markets-model';
 
 type Phase = 'demo' | 'loading' | 'offline' | 'ready';
 type Tone = 'ok' | 'warn' | 'error';
@@ -779,4 +779,6 @@ const copy = (c: CoreConfig): CoreConfig => ({
   ...(c.events ? { events: c.events.map((e) => ({ ...e, ...(e.pairs ? { pairs: [...e.pairs] } : {}) })) } : {}),
   ...(c.radar ? { radar: { feeds: [...c.radar.feeds], keywords: [...c.radar.keywords] } } : {}),
   ...(c.discovery ? { discovery: { tokens: c.discovery.tokens.map((t) => ({ ...t })), perToken: c.discovery.perToken } } : {}),
+  // Sem esta linha, salvar por aqui apagaria o motor de paper do arquivo.
+  ...(c.engine ? { engine: engineFor(c.engine, c.pairs) } : {}),
 });

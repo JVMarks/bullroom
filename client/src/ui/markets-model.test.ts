@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckResult } from '../../../shared/core/types';
-import { draftProblems, feeRows, formatFee, isVolatile, normalizePair, parseAlertPct, parseAmount, roomSummary, sameConfig, searchExchanges, transferLine } from './markets-model';
+import { draftProblems, engineFor, feeRows, formatFee, isVolatile, normalizePair, parseAlertPct, parseAmount, roomSummary, sameConfig, searchExchanges, transferLine } from './markets-model';
 
 const LIMITS = { minExchanges: 2, maxExchanges: 20, maxPairs: 20, minPollMs: 5000, maxPollMs: 300000, maxAlerts: 20, minAlertPct: -1, maxAlertPct: 10, minSizeUsd: 10, maxSizeUsd: 10000000 };
 
@@ -12,6 +12,28 @@ const CHECK: CheckResult = {
     { id: 'kraken', ok: false, error: 'timeout', listings: [{ pair: 'USDC/USDT', symbol: null, inverted: false, active: false, takerFee: null }, { pair: 'DAI/USDT', symbol: null, inverted: false, active: false, takerFee: null }] },
   ],
 };
+
+describe('motor de paper no config do painel Mercados', () => {
+  const engine = { enabled: true, policy: { maxTradeUsd: 100, minNetPct: 0.05, maxQuoteAgeMs: 20000, dailyLossLimitUsd: 5, allowedPairs: ['BTC/USDT', 'ERA/USDT'] }, totalUsd: 1000, reservePct: 20, capPct: 50, minUsd: 50, latencyMs: 1000, cooldownMs: 30000 };
+  const base = { exchanges: ['a', 'b'], pairs: ['BTC/USDT'], pollMs: 10000, alerts: [], transfer: { sizeUsd: 1000, withdrawFees: {} } };
+
+  it('mudar o motor conta como mudança', () => {
+    expect(sameConfig({ ...base, engine }, { ...base, engine })).toBe(true);
+    expect(sameConfig({ ...base, engine }, { ...base })).toBe(false);
+    expect(sameConfig({ ...base, engine }, { ...base, engine: { ...engine, totalUsd: 2000 } })).toBe(false);
+  });
+
+  it('par que saiu da lista sai dos permitidos, sem mexer no original', () => {
+    const next = engineFor(engine, ['BTC/USDT']);
+    expect(next?.policy.allowedPairs).toEqual(['BTC/USDT']);
+    expect(next?.totalUsd).toBe(1000);
+    expect(engine.policy.allowedPairs).toEqual(['BTC/USDT', 'ERA/USDT']);
+  });
+
+  it('sem motor continua sem motor', () => {
+    expect(engineFor(undefined, ['BTC/USDT'])).toBeUndefined();
+  });
+});
 
 describe('painel Mercados: regras', () => {
   it('normaliza o par digitado e recusa o que não é par', () => {

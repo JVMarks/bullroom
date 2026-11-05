@@ -6,6 +6,7 @@ import { MarketsView } from './markets';
 import { RoomWindows, SpreadsView } from './spreads';
 import { RankingView, WalletCard } from './wallet-card';
 import { BubblesView } from './bubbles';
+import { RobotsView } from './robots';
 import { AgendaView } from './agenda';
 import { RoomMachinesView } from './machines';
 import type { Activity, AgentInfo, FeedItem, RoomInfo, ShellJob, TaskItem } from '../../../shared/types';
@@ -845,6 +846,7 @@ class RoomView {
   private windowsSec: ReturnType<typeof section>;
   private machines = new RoomMachinesView();
   private machinesSec: ReturnType<typeof section>;
+  private robotsBtn: HTMLElement;
 
   constructor(
     private ctx: UiContext,
@@ -899,6 +901,7 @@ class RoomView {
 
     this.windowsSec = section(tr('Spread em janelas'), this.windows.boxes);
     this.machinesSec = section(tr('Máquinas'), this.machines.el);
+    this.robotsBtn = h('button', { class: 'ui-btn', type: 'button', hidden: true, text: tr('Abrir o painel Robôs'), on: { click: () => ctx.toggleRobots(true) } });
     const feedList = h('ol', { class: 'ui-timeline' });
     this.feedSec = section(tr('Atividade recente'), feedList);
     this.feed = new KeyedList<FeedItem>(feedList, { key: (f) => f.id, create: createTimelineItem, update: (li, f) => updateTimelineItem(li, f.activity, ctx.now(), f.agentName) });
@@ -917,6 +920,7 @@ class RoomView {
       this.newMsg,
       this.windowsSec.el,
       this.machinesSec.el,
+      this.robotsBtn,
       this.agentsSec.el,
       this.tasksSec.el,
       this.feedSec.el,
@@ -970,6 +974,7 @@ class RoomView {
     // sala de máquinas: só os números; sem agentes, tarefas nem atividade (ela não tem gente)
     const isMachines = this.machines.render(this.ctx, r.id);
     setHidden(this.machinesSec.el, !isMachines);
+    setHidden(this.robotsBtn, !r.simulation);
 
     const snap = this.ctx.store.snapshot;
     const agents = (snap?.agents ?? []).filter((a) => a.roomId === r.id);
@@ -995,7 +1000,7 @@ class RoomView {
 // ---------------------------------------------------------------- gaveta
 
 /** Painéis do Bullroom na gaveta (fora da seleção do escritório). */
-export type DrawerPanel = 'markets' | 'spreads' | 'ranking' | 'bubbles' | 'agenda';
+export type DrawerPanel = 'markets' | 'spreads' | 'ranking' | 'bubbles' | 'agenda' | 'robots';
 
 export class Drawer implements UiComponent {
   readonly el: HTMLElement;
@@ -1007,6 +1012,7 @@ export class Drawer implements UiComponent {
   private rankingView: RankingView;
   private bubblesView: BubblesView;
   private agendaView: AgendaView;
+  private robotsView: RobotsView;
   private mode: 'agent' | 'room' | DrawerPanel | null = null;
   /** Painel do Bullroom pedido ("Mercados" ou "Spreads"). Uma seleção no escritório tem prioridade e fecha o painel. */
   private panelWanted: DrawerPanel | null = null;
@@ -1027,9 +1033,10 @@ export class Drawer implements UiComponent {
     this.rankingView = new RankingView(ctx);
     this.bubblesView = new BubblesView(ctx);
     this.agendaView = new AgendaView(ctx);
+    this.robotsView = new RobotsView(ctx);
     this.heading = h('span', { class: 'ui-drawer__kind' });
     const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => {
-      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking' || this.mode === 'bubbles' || this.mode === 'agenda') this.togglePanel(this.mode, false);
+      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking' || this.mode === 'bubbles' || this.mode === 'agenda' || this.mode === 'robots') this.togglePanel(this.mode, false);
       else ctx.select(null);
     });
     this.body = h('div', { class: 'ui-drawer__body' });
@@ -1064,6 +1071,7 @@ export class Drawer implements UiComponent {
       else if (kind === 'ranking') this.rankingView.open();
       else if (kind === 'bubbles') this.bubblesView.open();
       else if (kind === 'agenda') this.agendaView.open();
+      else if (kind === 'robots') this.robotsView.open();
       else this.spreadsView.open();
     }
     this.ctx.invalidate();
@@ -1086,7 +1094,7 @@ export class Drawer implements UiComponent {
       // Gaveta fechada ou fora do agente: o editor fecha, e ao reabrir começa do estado atual do agente.
       if (this.mode === 'agent') this.agentView.character.close();
       this.mode = mode;
-      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : mode === 'bubbles' ? [this.bubblesView.el] : mode === 'agenda' ? [this.agendaView.el] : []));
+      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : mode === 'bubbles' ? [this.bubblesView.el] : mode === 'agenda' ? [this.agendaView.el] : mode === 'robots' ? [this.robotsView.el] : []));
       this.body.scrollTop = 0;
       this.el.classList.toggle('is-open', mode !== null);
       setAttr(this.el, 'aria-hidden', mode ? 'false' : 'true');
@@ -1118,6 +1126,9 @@ export class Drawer implements UiComponent {
     } else if (mode === 'agenda') {
       setText(this.heading, tr('Agenda'));
       this.agendaView.render();
+    } else if (mode === 'robots') {
+      setText(this.heading, tr('Robôs'));
+      this.robotsView.render();
     }
   }
 }
