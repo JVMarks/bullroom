@@ -5,6 +5,7 @@ import { BotCard } from './bot-card';
 import { MarketsView } from './markets';
 import { RoomWindows, SpreadsView } from './spreads';
 import { RankingView, WalletCard } from './wallet-card';
+import { AnalysesView } from './analyses';
 import { BubblesView } from './bubbles';
 import { RobotsView } from './robots';
 import { AgendaView } from './agenda';
@@ -1000,7 +1001,7 @@ class RoomView {
 // ---------------------------------------------------------------- gaveta
 
 /** Painéis do Bullroom na gaveta (fora da seleção do escritório). */
-export type DrawerPanel = 'markets' | 'spreads' | 'ranking' | 'bubbles' | 'agenda' | 'robots';
+export type DrawerPanel = 'markets' | 'spreads' | 'ranking' | 'bubbles' | 'agenda' | 'robots' | 'analyses';
 
 export class Drawer implements UiComponent {
   readonly el: HTMLElement;
@@ -1013,6 +1014,7 @@ export class Drawer implements UiComponent {
   private bubblesView: BubblesView;
   private agendaView: AgendaView;
   private robotsView: RobotsView;
+  private analysesView: AnalysesView;
   private mode: 'agent' | 'room' | DrawerPanel | null = null;
   /** Painel do Bullroom pedido ("Mercados" ou "Spreads"). Uma seleção no escritório tem prioridade e fecha o painel. */
   private panelWanted: DrawerPanel | null = null;
@@ -1034,9 +1036,10 @@ export class Drawer implements UiComponent {
     this.bubblesView = new BubblesView(ctx);
     this.agendaView = new AgendaView(ctx);
     this.robotsView = new RobotsView(ctx);
+    this.analysesView = new AnalysesView(ctx);
     this.heading = h('span', { class: 'ui-drawer__kind' });
     const close = iconButton(ICONS.close, tr('Fechar detalhes (Esc)'), () => {
-      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking' || this.mode === 'bubbles' || this.mode === 'agenda' || this.mode === 'robots') this.togglePanel(this.mode, false);
+      if (this.mode === 'markets' || this.mode === 'spreads' || this.mode === 'ranking' || this.mode === 'bubbles' || this.mode === 'agenda' || this.mode === 'robots' || this.mode === 'analyses') this.togglePanel(this.mode, false);
       else ctx.select(null);
     });
     this.body = h('div', { class: 'ui-drawer__body' });
@@ -1072,6 +1075,7 @@ export class Drawer implements UiComponent {
       else if (kind === 'bubbles') this.bubblesView.open();
       else if (kind === 'agenda') this.agendaView.open();
       else if (kind === 'robots') this.robotsView.open();
+      else if (kind === 'analyses') this.analysesView.open();
       else this.spreadsView.open();
     }
     this.ctx.invalidate();
@@ -1094,7 +1098,7 @@ export class Drawer implements UiComponent {
       // Gaveta fechada ou fora do agente: o editor fecha, e ao reabrir começa do estado atual do agente.
       if (this.mode === 'agent') this.agentView.character.close();
       this.mode = mode;
-      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : mode === 'bubbles' ? [this.bubblesView.el] : mode === 'agenda' ? [this.agendaView.el] : mode === 'robots' ? [this.robotsView.el] : []));
+      this.body.replaceChildren(...(mode === 'agent' ? [this.agentView.el] : mode === 'room' ? [this.roomView.el] : mode === 'markets' ? [this.marketsView.el] : mode === 'spreads' ? [this.spreadsView.el] : mode === 'ranking' ? [this.rankingView.el] : mode === 'bubbles' ? [this.bubblesView.el] : mode === 'agenda' ? [this.agendaView.el] : mode === 'robots' ? [this.robotsView.el] : mode === 'analyses' ? [this.analysesView.el] : []));
       this.body.scrollTop = 0;
       this.el.classList.toggle('is-open', mode !== null);
       setAttr(this.el, 'aria-hidden', mode ? 'false' : 'true');
@@ -1129,6 +1133,9 @@ export class Drawer implements UiComponent {
     } else if (mode === 'robots') {
       setText(this.heading, tr('Robôs'));
       this.robotsView.render();
+    } else if (mode === 'analyses') {
+      setText(this.heading, tr('Análises'));
+      this.analysesView.render();
     }
   }
 }

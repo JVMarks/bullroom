@@ -165,7 +165,7 @@ export class RobotsView {
         h(
           'article',
           { class: 'ui-rb__bot' },
-          h('div', { class: 'ui-rb__head' }, h('b', { text: r.title }), h('span', { class: `ui-rb__pill is-${r.tone}`, text: r.status })),
+          h('div', { class: 'ui-rb__head' }, h('b', {}, r.title, ...(r.mcp ? [h('span', { class: 'ui-rb__mcp', text: 'MCP', attrs: { title: tr('Ligado pelo seu Claude ou Codex, pela mesma trava de risco.') } })] : [])), h('span', { class: `ui-rb__pill is-${r.tone}`, text: r.status })),
           kv(tr('Resultado'), r.pnl, `is-${r.pnlTone}`),
           kv('', r.result),
           kv(tr('Leituras acima do mínimo'), r.samples),

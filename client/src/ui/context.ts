@@ -79,6 +79,8 @@ export interface UiContext {
   toggleAgenda(open?: boolean): void;
   /** Abre/fecha o painel "Robôs" (motor de paper do OpenSpread) na gaveta da direita. */
   toggleRobots(open?: boolean): void;
+  /** Abre/fecha o painel "Análises" (o que o Claude/Codex do usuário registrou, com o placar) na gaveta da direita. */
+  toggleAnalyses(open?: boolean): void;
   /** Abre/fecha a janela do Habblaud World (o botão da barra do topo; ui/world/world-dialog.ts). */
   toggleWorld(): void;
   /** Abre o campo de renomear a sala perto do ponto (px da janela); botão direito na sala (ui/roomrename.ts). */

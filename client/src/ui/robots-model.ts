@@ -9,6 +9,8 @@ export type RobotTone = 'run' | 'park' | 'out';
 export interface RobotRow {
   id: string;
   title: string;
+  /** Ligado pelo Claude/Codex do usuário. */
+  mcp: boolean;
   status: string;
   tone: RobotTone;
   /** "+US$ 0,50" */
@@ -52,6 +54,7 @@ export function botRows(e: EngineState, locale: string): RobotRow[] {
     return {
       id: b.id,
       title: `${b.pair} · ${b.exchanges.map(exchangeName).join(' + ')}`,
+      mcp: b.source === 'mcp',
       status,
       tone,
       pnl: money(b.pnlUsd, locale),

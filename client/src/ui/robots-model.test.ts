@@ -155,3 +155,12 @@ describe('escolha do par', () => {
     expect(pairHint(undefined, 0.05, 'pt-BR').low).toBe(false);
   });
 });
+
+describe('quem ligou o robô', () => {
+  const bot = (source?: 'user' | 'mcp') => ({ id: 'b', ...(source ? { source } : {}), pair: 'BTC/USDT', exchanges: ['okx', 'bybit'], capitalUsd: 100, startedAt: 0, status: 'running', pnlUsd: 0, pnlTodayUsd: 0, feesUsd: 0, trades: 0, wins: 0, losses: 0, maxDrawdownUsd: 0, balances: {}, samples: 0, samplesAbove: 0, series: [] }) as EngineState['bots'][number];
+  it('só o que veio do MCP ganha a marca; robô antigo não', () => {
+    expect(botRows(engine({ bots: [bot('mcp')] }), 'pt-BR')[0].mcp).toBe(true);
+    expect(botRows(engine({ bots: [bot('user')] }), 'pt-BR')[0].mcp).toBe(false);
+    expect(botRows(engine({ bots: [bot()] }), 'pt-BR')[0].mcp).toBe(false);
+  });
+});

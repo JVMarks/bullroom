@@ -12,6 +12,10 @@ do meio (0.**3**.0).
 
 ### Novo
 
+- **Painel Análises (`?source=core`).** Configurações › Mercados › Análises: o que o seu Claude ou Codex registrou pelo MCP do
+  OpenSpread, com o resultado medido pelo núcleo. Até 30 análises resolvidas, o número grande é a amostra, sem percentual; depois
+  aparecem o acerto e o gráfico de calibração. Acertos, erros e análises sem dados têm o mesmo destaque. É um registro do próprio
+  usuário: não é ordem nem recomendação. Robô simulado ligado pelo MCP ganha a marca `MCP` no painel Robôs.
 - **Motor de paper e sala de simulação (`?source=core`).** Painel "Robôs" (Configurações › Robôs, ou o chip `paper` no
   topo): liga robôs de arbitragem simulados sobre o livro de ofertas real, com trava de risco a cada oportunidade, capital
   por robô e limite de perda diária. Nenhuma chave, nenhuma ordem de verdade. Todos os robôs ficam numa única sala roxa com
